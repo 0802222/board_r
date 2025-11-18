@@ -1,0 +1,106 @@
+package com.cho.board.domain.user;
+
+import com.cho.board.domain.BaseEntity;
+import com.cho.board.domain.comment.Comment;
+import com.cho.board.domain.post.Post;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.springframework.security.core.parameters.P;
+
+@Entity
+@Table(name = "users")
+@Getter
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class User extends BaseEntity {
+
+    @Id
+    @Column(nullable = false, updatable = false)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, length = 10)
+    private String name;
+
+    @Column(nullable = false, length = 20)
+    private String nickname;
+
+    @Column(nullable = false, unique = true, length = 50)
+    private String email;
+
+    @Column(nullable = false, length = 255)
+    private String password;
+
+    @Column
+    private String profileImage;
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private Role role = Role.USER;
+
+    @Column
+    private LocalDateTime lastLoginAt;
+
+    @Column
+    private int loginCount;
+
+    public void updateProfile(String nickname, String profileImage) {
+        if (nickname != null) {
+            if (nickname.isBlank()) {
+                throw new IllegalArgumentException("Nickname cannot be empty");
+            }
+            if (nickname.length() > 20) {
+                throw new IllegalArgumentException("Nickname too long (limit : 20)");
+            }
+            this.nickname = nickname;
+        }
+
+        if (profileImage != null) {
+            this.profileImage = profileImage;
+        }
+    }
+
+    public void changePassword(String newPassword) {
+        if (newPassword == null || newPassword.isBlank()) {
+            throw new IllegalArgumentException("Password cannot be empty");
+        }
+
+        if (newPassword.length() > 255) {
+            throw new IllegalArgumentException("Password too long (limit:50)");
+        }
+
+        if (!isValidPassword(newPassword)) {
+            throw new IllegalArgumentException("Password must be at least 8 characters and include letters, numbers, and special characters");
+        }
+
+        this.password = newPassword;
+    }
+
+    private boolean isValidPassword(String password) {
+        String pattern = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[@$!%*#?&])[A-Za-z\\d@$!%*#?&]{8,}$";
+        return password.matches(pattern);
+    }
+
+    @OneToMany(mappedBy = "author")
+    private List<Post> posts = new ArrayList<>();
+
+    @OneToMany(mappedBy = "author")
+    private List<Comment> comments = new ArrayList<>();
+}
