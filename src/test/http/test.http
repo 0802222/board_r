@@ -1,0 +1,15 @@
+### GET request to example server
+GET https://examples.http-client.intellij.net/get
+    ?generated-in=IntelliJ IDEA
+
+### 회원 조회
+GET localhost:8080/user
+Content-Type: application/json
+
+### 게시물 조회
+GET localhost:8080/post
+Content-Type: application/json
+
+### 댓글 조회
+GET localhost:8080/comment
+Content-Type: application/json
