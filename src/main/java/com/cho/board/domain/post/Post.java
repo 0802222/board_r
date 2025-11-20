@@ -4,6 +4,7 @@ import com.cho.board.domain.BaseEntity;
 import com.cho.board.domain.category.Category;
 import com.cho.board.domain.comment.Comment;
 import com.cho.board.domain.user.User;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -60,7 +61,7 @@ public class Post extends BaseEntity {
     @JoinColumn(name = "category_id")
     private Category category;
 
-    @OneToMany(mappedBy = "post")
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();
 
     public void update(String title, String content, Category category) {
