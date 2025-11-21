@@ -5,6 +5,9 @@ import com.cho.board.controller.post.dtos.PostUpdateRequest;
 import com.cho.board.domain.category.Category;
 import com.cho.board.domain.post.Post;
 import com.cho.board.domain.user.User;
+import com.cho.board.global.exception.AccessDeniedException;
+import com.cho.board.global.exception.ErrorCode;
+import com.cho.board.global.exception.ResourceNotFoundException;
 import com.cho.board.repository.category.CategoryRepository;
 import com.cho.board.repository.post.PostRepository;
 import com.cho.board.repository.user.UserRepository;
@@ -26,10 +29,10 @@ public class PostService {
 
     public Post create(Long userId, PostCreateRequest request) {
         User author = userRepository.findById(userId)
-            .orElseThrow(() -> new EntityNotFoundException("User not found"));
+            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND));
 
         Category category = categoryRepository.findById(request.getCategoryId())
-            .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.CATEGORY_NOT_FOUND));
 
         Post post = Post.builder()
             .title(request.getTitle())
@@ -49,20 +52,20 @@ public class PostService {
     @Transactional(readOnly = true)
     public Post findById(Long id) {
         return postRepository.findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("Post not found with ID : " + id));
+            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.POST_NOT_FOUND, "게시글을 찾을 수 없습니다. ID: " + id));
     }
 
     public Post update(Long postId, Long userId, PostUpdateRequest request) {
         Post post = findById(postId);
 
         if (!post.getAuthor().getId().equals(userId)) {
-            throw new IllegalArgumentException("Only author can update the post");
+            throw new AccessDeniedException(ErrorCode.POST_ACCESS_DENIED);
         }
 
         Category category = null;
         if (request.getCategoryId() != null) {
             category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.CATEGORY_NOT_FOUND));
         }
 
         post.update(request.getTitle(), request.getContent(), category);
@@ -74,7 +77,7 @@ public class PostService {
         Post post = findById(postId);
 
         if (!post.getAuthor().getId().equals(userId)) {
-            throw new IllegalArgumentException("Only author can delete the post");
+            throw new AccessDeniedException(ErrorCode.POST_ACCESS_DENIED);
         }
 
         postRepository.delete(post);

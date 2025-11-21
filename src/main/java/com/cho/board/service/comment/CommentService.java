@@ -1,12 +1,16 @@
 package com.cho.board.service.comment;
 
 
+import com.cho.board.controller.comment.dtos.CommentCreateRequest;
 import com.cho.board.controller.comment.dtos.CommentResponse;
 import com.cho.board.controller.comment.dtos.CommentUpdateRequest;
 import com.cho.board.domain.comment.Comment;
-import com.cho.board.controller.comment.dtos.CommentCreateRequest;
 import com.cho.board.domain.post.Post;
 import com.cho.board.domain.user.User;
+import com.cho.board.global.exception.AccessDeniedException;
+import com.cho.board.global.exception.BusinessException;
+import com.cho.board.global.exception.ErrorCode;
+import com.cho.board.global.exception.ResourceNotFoundException;
 import com.cho.board.repository.comment.CommentRepository;
 import com.cho.board.repository.post.PostRepository;
 import com.cho.board.repository.user.UserRepository;
@@ -14,7 +18,6 @@ import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +35,7 @@ public class CommentService {
     public CommentResponse getCommentById(Long commentId) {
 
         Comment comment = commentRepository.findById(commentId)
-            .orElseThrow(() -> new EntityNotFoundException("댓글을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.COMMENT_NOT_FOUND));
         return new CommentResponse(comment);
     }
 
@@ -60,15 +63,15 @@ public class CommentService {
     public CommentResponse create(Long postId, Long authorId, CommentCreateRequest request) {
 
         Post post = postRepository.findById(postId)
-            .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.POST_NOT_FOUND));
 
         User author = userRepository.findById(authorId)
-            .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND));
 
         Comment parent = null;
         if (request.getParentId() != null) {
             parent = commentRepository.findById(request.getParentId())
-                .orElseThrow(() -> new IllegalArgumentException("부모 댓글을 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.COMMENT_NOT_FOUND, "부모 댓글을 찾을 수 없습니다."));
         }
 
         Comment comment = Comment.builder()
@@ -85,14 +88,14 @@ public class CommentService {
     // 댓글 수정
     public CommentResponse update(Long commentId, Long authorId, CommentUpdateRequest request) {
         Comment comment = commentRepository.findById(commentId)
-            .orElseThrow(() -> new EntityNotFoundException("댓글을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.COMMENT_NOT_FOUND));
 
         if (!comment.isAuthor(authorId)) {
-            throw new IllegalArgumentException("댓글 작성자만 수정할 수 있습니다.");
+            throw new AccessDeniedException(ErrorCode.COMMENT_ACCESS_DENIED);
         }
 
         if (comment.isDeleted()) {
-            throw new IllegalArgumentException("삭제된 댓글은 수정할 수 없습니다.");
+            throw new BusinessException(ErrorCode.DELETED_COMMENT);
         }
 
         comment.updateContent(request.getContent());
@@ -102,10 +105,10 @@ public class CommentService {
 
     public void delete(Long commentId, Long authorId) {
         Comment comment = commentRepository.findById(commentId)
-            .orElseThrow(() -> new EntityNotFoundException("댓글을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.COMMENT_NOT_FOUND));
 
         if (!comment.isAuthor(authorId)) {
-            throw new IllegalArgumentException("댓글 작성자만 삭제할 수 있습니다.");
+            throw new AccessDeniedException(ErrorCode.COMMENT_ACCESS_DENIED);
         }
 
         if (comment.isParentComment() && !comment.getChildren().isEmpty()) {

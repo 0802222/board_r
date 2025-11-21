@@ -2,8 +2,9 @@ package com.cho.board.service.category;
 
 import com.cho.board.domain.category.Category;
 import com.cho.board.domain.category.CategoryType;
+import com.cho.board.global.exception.ErrorCode;
+import com.cho.board.global.exception.ResourceNotFoundException;
 import com.cho.board.repository.category.CategoryRepository;
-import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,6 @@ public class CategoryService {
     @Transactional(readOnly = true)
     public Category findById(Long id) {
         return categoryRepository.findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.CATEGORY_NOT_FOUND));
     }
 }
