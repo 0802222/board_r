@@ -58,7 +58,7 @@ public class PostService {
     public Post update(Long postId, Long userId, PostUpdateRequest request) {
         Post post = findById(postId);
 
-        if (!post.getAuthor().getId().equals(userId)) {
+        if (!post.isAuthor(userId)) {
             throw new AccessDeniedException(ErrorCode.POST_ACCESS_DENIED);
         }
 

@@ -62,6 +62,7 @@ public class Comment extends BaseEntity {
     // 비즈니스 메서드
     public void updateContent(String content) {
         this.content = content;
+        updateTimestamp();
     }
 
     public void delete() {

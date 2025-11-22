@@ -1,7 +1,7 @@
 package com.cho.board.controller.comment.dtos;
 
-import com.cho.board.domain.user.User;
-import com.cho.board.domain.post.Post;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -9,10 +9,8 @@ import lombok.Setter;
 @Setter
 public class CommentUpdateRequest {
 
-    private Long commentId;
-    private Long parentId;
+    @NotBlank(message = "댓글 내용은 필수입니다.")
+    @Size(min = 1, max = 500, message = "댓글은 1~500자여야 합니다.")
     private String content;
-    private Post post;
-    private User user;
 
 }

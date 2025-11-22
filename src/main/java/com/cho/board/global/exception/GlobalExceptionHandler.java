@@ -1,10 +1,12 @@
 package com.cho.board.global.exception;
 
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -128,5 +130,32 @@ public class GlobalExceptionHandler {
             ErrorCode.INVALID_INPUT_VALUE.getMessage()
         );
         return ResponseEntity.internalServerError().body(response);
+    }
+
+    // JSON 파싱 에러 (타입 불일치 등)
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    protected ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(
+        HttpMessageNotReadableException e) {
+        log.error("HttpMessageNotReadableException: {}", e.getMessage());
+
+        String message = "요청 본문을 읽을 수 없습니다.";
+
+        // 타입 변환 실패인 경우 상세 메시지
+        if (e.getCause() instanceof InvalidFormatException) {
+            InvalidFormatException ife = (InvalidFormatException) e.getCause();
+            String fieldName = ife.getPath().isEmpty() ? "알 수 없음"
+                : ife.getPath().get(0).getFieldName();
+            message = String.format("'%s' 필드의 타입이 올바르지 않습니다. (입력값: %s)",
+                fieldName, ife.getValue());
+        }
+
+        ErrorResponse response = ErrorResponse.of(
+            HttpStatus.BAD_REQUEST.value(),
+            HttpStatus.BAD_REQUEST.getReasonPhrase(),
+            ErrorCode.INVALID_TYPE_VALUE.getCode(),
+            message
+        );
+
+        return ResponseEntity.badRequest().body(response);
     }
 }

@@ -77,25 +77,13 @@ public class User extends BaseEntity {
         }
     }
 
-    public void changePassword(String newPassword) {
-        if (newPassword == null || newPassword.isBlank()) {
-            throw new IllegalArgumentException("Password cannot be empty");
-        }
-
-        if (newPassword.length() > 255) {
-            throw new IllegalArgumentException("Password too long (limit:50)");
-        }
-
-        if (!isValidPassword(newPassword)) {
-            throw new IllegalArgumentException("Password must be at least 8 characters and include letters, numbers, and special characters");
-        }
-
-        this.password = newPassword;
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
     }
 
-    private boolean isValidPassword(String password) {
+    private static boolean isValidRawPassword(String rawPassword) {
         String pattern = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[@$!%*#?&])[A-Za-z\\d@$!%*#?&]{8,}$";
-        return password.matches(pattern);
+        return rawPassword.matches(pattern);
     }
 
     @OneToMany(mappedBy = "author")

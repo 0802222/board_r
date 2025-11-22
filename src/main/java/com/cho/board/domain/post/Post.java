@@ -23,6 +23,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.UpdateTimestamp;
 
 @Entity
 @Table(name = "Posts")
@@ -74,9 +75,14 @@ public class Post extends BaseEntity {
         if (category != null) {
             this.category = category;
         }
+        updateTimestamp();
     }
 
     public void increaseViewCount() {
         this.viewCount++;
+    }
+
+    public boolean isAuthor(Long userId) {
+        return this.author.getId().equals(userId);
     }
 }
