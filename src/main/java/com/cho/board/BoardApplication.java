@@ -9,8 +9,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication
 @EnableJpaAuditing
-@EntityScan("com.cho.board.domain")
-@EnableJpaRepositories("com.cho.board.repository")
+@EntityScan("com.cho.board")
+@EnableJpaRepositories("com.cho.board")
 public class BoardApplication {
 
     public static void main(String[] args) {

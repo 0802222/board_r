@@ -79,8 +79,9 @@ public class UserService {
 
     public void delete(Long userId) {
         User user = userRepository.findById(userId)
-            .orElseThrow(IllegalArgumentException::new);
-
+            .orElseThrow(() -> new ResourceNotFoundException(
+                ErrorCode.USER_NOT_FOUND)
+            );
         userRepository.delete(user);
     }
 }
