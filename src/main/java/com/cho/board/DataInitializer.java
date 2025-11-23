@@ -1,7 +1,7 @@
 package com.cho.board;
 
-import com.cho.board.domain.category.CategoryType;
-import com.cho.board.service.category.CategoryService;
+import com.cho.board.category.entity.CategoryType;
+import com.cho.board.category.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;

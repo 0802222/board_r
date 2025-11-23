@@ -1,0 +1,121 @@
+package com.cho.board.comment.service;
+
+
+import com.cho.board.comment.dtos.CommentCreateRequest;
+import com.cho.board.comment.dtos.CommentResponse;
+import com.cho.board.comment.dtos.CommentUpdateRequest;
+import com.cho.board.comment.entity.Comment;
+import com.cho.board.post.entity.Post;
+import com.cho.board.user.entity.User;
+import com.cho.board.global.exception.AccessDeniedException;
+import com.cho.board.global.exception.BusinessException;
+import com.cho.board.global.exception.ErrorCode;
+import com.cho.board.global.exception.ResourceNotFoundException;
+import com.cho.board.comment.repository.CommentRepository;
+import com.cho.board.post.repository.PostRepository;
+import com.cho.board.user.repository.UserRepository;
+import java.util.List;
+import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@Transactional
+@RequiredArgsConstructor
+public class CommentService {
+
+    private final CommentRepository commentRepository;
+    private final PostRepository postRepository;
+    private final UserRepository userRepository;
+
+    // 특정 댓글 조회
+    @Transactional(readOnly = true)
+    public CommentResponse getCommentById(Long commentId) {
+
+        Comment comment = commentRepository.findById(commentId)
+            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.COMMENT_NOT_FOUND));
+        return new CommentResponse(comment);
+    }
+
+    // 최 상위 댓글만 조회
+    @Transactional(readOnly = true)
+    public List<CommentResponse> getParentCommentsByPost(Long postId) {
+        return commentRepository
+            .findAllByPostId(postId)
+            .stream()
+            .filter(Comment::isParentComment)
+            .map(CommentResponse::new)
+            .collect(Collectors.toList());
+    }
+
+    // 모든 댓글 조회 (대댓글 포함)
+    @Transactional(readOnly = true)
+    public List<CommentResponse> getAllCommentsByPost(Long postId) {
+        return commentRepository.findAllByPostId(postId)
+            .stream()
+            .map(CommentResponse::new)
+            .collect(Collectors.toList());
+    }
+
+    // 댓글 작성
+    public CommentResponse create(Long postId, Long authorId, CommentCreateRequest request) {
+
+        Post post = postRepository.findById(postId)
+            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.POST_NOT_FOUND));
+
+        User author = userRepository.findById(authorId)
+            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND));
+
+        Comment parent = null;
+        if (request.getParentId() != null) {
+            parent = commentRepository.findById(request.getParentId())
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.COMMENT_NOT_FOUND, "부모 댓글을 찾을 수 없습니다."));
+        }
+
+        Comment comment = Comment.builder()
+            .content(request.getContent())
+            .post(post)
+            .author(author)
+            .parent(parent)
+            .build();
+
+        Comment savedComment = commentRepository.save(comment);
+        return new CommentResponse(savedComment);
+    }
+
+    // 댓글 수정
+    public CommentResponse update(Long commentId, Long authorId, CommentUpdateRequest request) {
+        Comment comment = commentRepository.findById(commentId)
+            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.COMMENT_NOT_FOUND));
+
+        if (!comment.isAuthor(authorId)) {
+            throw new AccessDeniedException(ErrorCode.COMMENT_ACCESS_DENIED);
+        }
+
+        if (comment.isDeleted()) {
+            throw new BusinessException(ErrorCode.DELETED_COMMENT);
+        }
+
+        comment.updateContent(request.getContent());
+
+        return new CommentResponse(comment);
+    }
+
+    public void delete(Long commentId, Long authorId) {
+        Comment comment = commentRepository.findById(commentId)
+            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.COMMENT_NOT_FOUND));
+
+        if (!comment.isAuthor(authorId)) {
+            throw new AccessDeniedException(ErrorCode.COMMENT_ACCESS_DENIED);
+        }
+
+        if (comment.isParentComment() && !comment.getChildren().isEmpty()) {
+            // 최상위 댓글이고 대댓글이 있으면 소프트 삭제
+            comment.delete();
+        } else {
+            // 대댓글이거나 자식이 없으면 실제 삭제
+            commentRepository.delete(comment);
+        }
+    }
+}
