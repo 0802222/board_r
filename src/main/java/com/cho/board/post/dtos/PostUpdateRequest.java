@@ -1,11 +1,13 @@
 package com.cho.board.post.dtos;
 
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
 public class PostUpdateRequest {
 
     @Size(min = 1, max = 100, message = "제목은 1~100자여야 합니다.")
