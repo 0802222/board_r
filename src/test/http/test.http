@@ -3,13 +3,40 @@ GET https://examples.http-client.intellij.net/get
     ?generated-in=IntelliJ IDEA
 
 ### 회원 조회
-GET localhost:8080/user
+GET localhost:8080/users
 Content-Type: application/json
 
 ### 게시물 조회
-GET localhost:8080/post
+GET localhost:8080/posts
 Content-Type: application/json
 
 ### 댓글 조회
-GET localhost:8080/comment
+GET localhost:8080/comments
 Content-Type: application/json
+ㅕ
+
+# file-upload test
+### 1. 사용자 생성
+POST http://localhost:8080/users
+Content-Type: application/json
+
+{
+  "name": "초밥왕",
+  "nickname": "chocho",
+  "email": "cho@test.com",
+  "password": "Test1234!@"
+}
+
+### 2. 프로필 이미지 업로드
+POST http://localhost:8080/users/1/profile-image
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="profile.png"
+Content-Type: image/png
+
+< /Users/cho/Pictures/image.png
+--boundary--
+
+### 3. 업로드 확인
+GET http://localhost:8080/users/1

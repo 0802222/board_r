@@ -45,3 +45,6 @@ out/
 ### os ###
 .DS_Store
 Thumbs.db
+
+### upload-file(images) ###
+uploads/
