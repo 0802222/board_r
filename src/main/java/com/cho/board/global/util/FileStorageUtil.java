@@ -1,7 +1,11 @@
 package com.cho.board.global.util;
 
+import com.cho.board.global.exception.ErrorCode;
 import com.cho.board.global.exception.FileStorageException;
+import com.cho.board.global.exception.ResourceNotFoundException;
+import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -10,6 +14,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -116,6 +122,49 @@ public class FileStorageUtil {
             Files.deleteIfExists(filePath);
         } catch (IOException ex) {
             throw new FileStorageException("파일 삭제에 실패했습니다: " + filename, ex);
+        }
+    }
+
+    // 파일 리소스 로드 (다운로드/조회용)
+    public Resource loadFileAsResource(String filename) {
+        try {
+            Path profilePath = profileStorageLocation.resolve(filename).normalize();
+            Path postPath = postStorageLocation.resolve(filename).normalize();
+
+            Resource resource;
+            if (Files.exists(profilePath)) {
+                resource = new UrlResource(profilePath.toUri());
+            } else if (Files.exists(postPath)) {
+                resource = new UrlResource(postPath.toUri());
+            } else {
+                throw new ResourceNotFoundException(
+                    ErrorCode.RESOURCE_NOT_FOUND, "파일을 찾을 수 없습니다. : " + filename);
+            }
+
+            if (resource.exists() && resource.isReadable()) {
+                return resource;
+            } else {
+                throw new ResourceNotFoundException(ErrorCode.RESOURCE_NOT_FOUND,
+                    "파일을 읽을 수 없습니다. " + filename);
+            }
+        } catch (MalformedURLException e) {
+            throw new FileStorageException("파일 경로 오류: " + filename);
+        }
+    }
+
+    // 파일 삭제
+    public void deleteFile(String filename) {
+        try {
+            Path profilePath = profileStorageLocation.resolve(filename).normalize();
+            Path postPath = postStorageLocation.resolve(filename).normalize();
+
+            if (Files.exists(profilePath)) {
+                Files.delete(profilePath);
+            } else if (Files.exists(postPath)) {
+                Files.delete(postPath);
+            }
+        } catch (IOException e) {
+            throw new FileStorageException("파일 삭제 실패: " + filename);
         }
     }
 }

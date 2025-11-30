@@ -2,6 +2,8 @@ package com.cho.board.post.dtos;
 
 import com.cho.board.post.entity.Post;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -22,6 +24,8 @@ public class PostDetailResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    private List<PostImageResponse> images;
+
     public static PostDetailResponse from(Post post) {
         return PostDetailResponse.builder()
             .id(post.getId())
@@ -34,6 +38,9 @@ public class PostDetailResponse {
             .categoryType(post.getCategory().getCategoryType().getDescription())
             .createdAt(post.getCreatedAt())
             .updatedAt(post.getUpdatedAt())
+            .images(post.getImages().stream()
+                .map(PostImageResponse::from)
+                .collect(Collectors.toList()))
             .build();
     }
 }

@@ -15,8 +15,15 @@ public class PostListResponse {
     private String authorName;
     private String categoryType;
     private LocalDateTime createdAt;
+    private String thumbnailPath;
+    private Integer imageCount;
 
     public static PostListResponse from(Post post) {
+
+        String thumbnail = post.getImages().isEmpty()
+            ? null
+            : post.getImages().get(0).getFilePath();
+
         return PostListResponse.builder()
             .id(post.getId())
             .title(post.getTitle())
@@ -24,6 +31,8 @@ public class PostListResponse {
             .authorName(post.getAuthor().getName())
             .categoryType(post.getCategory().getCategoryType().getDescription())
             .createdAt(post.getCreatedAt())
+            .thumbnailPath(thumbnail)
+            .imageCount(post.getImages().size())
             .build();
     }
 }
