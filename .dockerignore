@@ -1,0 +1,30 @@
+# Git
+.git
+.gitignore
+
+# Build artifacts
+build/
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+# Uploads
+uploads/
+
+# Environment
+.env
+*.pem
+
+# Documentation
+README.md
+HELP.md
+CLAUDE.md

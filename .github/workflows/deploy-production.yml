@@ -1,0 +1,130 @@
+name: Deploy to Production (Blue-Green)
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/board-production
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew clean bootJar --no-daemon
+
+      - name: Run tests
+        run: ./gradlew test --no-daemon
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=,format=short
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Blue-Green Deployment
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: 22
+          script: |
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            
+            if docker ps | grep -q board-blue; then
+              CURRENT="blue"
+              CURRENT_PORT=8080
+              NEW="green"
+              NEW_PORT=8081
+            else
+              CURRENT="green"
+              CURRENT_PORT=8081
+              NEW="blue"
+              NEW_PORT=8080
+            fi
+            
+            echo "Current: $CURRENT (port $CURRENT_PORT)"
+            echo "Deploying to: $NEW (port $NEW_PORT)"
+            
+            docker stop board-$NEW || true
+            docker rm board-$NEW || true
+            
+            docker run -d \
+              --name board-$NEW \
+              --restart unless-stopped \
+              -p $NEW_PORT:8080 \
+              -e SPRING_PROFILES_ACTIVE=prod \
+              -e SPRING_DATASOURCE_URL=${{ secrets.PROD_DB_URL }} \
+              -e SPRING_DATASOURCE_USERNAME=${{ secrets.PROD_DB_USERNAME }} \
+              -e SPRING_DATASOURCE_PASSWORD=${{ secrets.PROD_DB_PASSWORD }} \
+              -v /home/ubuntu/board-uploads:/app/uploads \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            
+            echo "Waiting for new container to be healthy..."
+            for i in {1..12}; do
+              if curl -f http://localhost:$NEW_PORT/actuator/health; then
+                echo "✅ New container is healthy!"
+                break
+              fi
+              if [ $i -eq 12 ]; then
+                echo "❌ Health check failed"
+                docker logs board-$NEW
+                exit 1
+              fi
+              echo "Retry $i/12..."
+              sleep 5
+            done
+            
+            sudo bash /home/ubuntu/scripts/switch-nginx.sh $NEW_PORT
+            
+            sudo nginx -t && sudo systemctl reload nginx
+            
+            echo "✅ Traffic switched to $NEW (port $NEW_PORT)"
+            
+            sleep 30
+            docker stop board-$CURRENT || true
+            docker rm board-$CURRENT || true
+            
+            docker image prune -af
+            
+            echo "🎉 Blue-Green deployment completed successfully!"
