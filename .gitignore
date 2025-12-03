@@ -48,3 +48,7 @@ Thumbs.db
 
 ### upload-file(images) ###
 uploads/
+
+# secret
+*.pem
+Board-Key.pem
