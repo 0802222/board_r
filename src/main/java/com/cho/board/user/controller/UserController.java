@@ -83,6 +83,6 @@ public class UserController {
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long userId) {
         userService.delete(userId);
 
-        return ResponseEntity.ok(ApiResponse.success("회원 탈퇴가 완료되었습니다."));
+        return ResponseEntity.noContent().build();
     }
 }
