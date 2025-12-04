@@ -43,34 +43,27 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Deploy to Staging Server
+      - name: Deploy to Staging Server (docker-compose)
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
           port: 22
+          script_stop: true
           script: |
+            cd ~
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
+            # 최신 스테이징 이미지 받아오기
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
-            docker stop board-staging || true
-            docker rm board-staging || true
+            # docker-compose 로 재배포
+            docker-compose down
+            docker-compose up -d
 
-            docker run -d \
-              --name board-staging \
-              --restart unless-stopped \
-              -p 8082:8080 \
-              -e SPRING_PROFILES_ACTIVE=dev \
-              -e SPRING_DATASOURCE_URL=${{ secrets.STAGING_DB_URL }} \
-              -e SPRING_DATASOURCE_USERNAME=${{ secrets.STAGING_DB_USERNAME }} \
-              -e SPRING_DATASOURCE_PASSWORD=${{ secrets.STAGING_DB_PASSWORD }} \
-              -v /home/ubuntu/board-uploads:/app/uploads \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
-            echo "Waiting for application to start..."
+            # 헬스 체크 (compose 에서 8080을 쓴다고 가정)
             sleep 30
-            curl -f http://localhost:8082/actuator/health || exit 1
+            curl -f http://localhost:8080/actuator/health || exit 1
 
             docker image prune -af
