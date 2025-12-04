@@ -27,6 +27,8 @@ public class UserUpdateRequest {
     )
     private String password;
 
+    private String profileImage;
+
     @Builder.Default
     private Role role = Role.USER;
 
