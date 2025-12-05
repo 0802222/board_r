@@ -1,9 +1,13 @@
 package com.cho.board.post.service;
 
 import com.cho.board.post.dtos.PostCreateRequest;
+import com.cho.board.post.dtos.PostDetailResponse;
+import com.cho.board.post.dtos.PostListResponse;
+import com.cho.board.post.dtos.PostSearchCondition;
 import com.cho.board.post.dtos.PostUpdateRequest;
 import com.cho.board.category.entity.Category;
 import com.cho.board.post.entity.Post;
+import com.cho.board.post.repository.PostRepositoryImpl;
 import com.cho.board.user.entity.User;
 import com.cho.board.global.exception.AccessDeniedException;
 import com.cho.board.global.exception.ErrorCode;
@@ -85,6 +89,13 @@ public class PostService {
     public void increaseViewCount(Long postId) {
         Post post = findById(postId);
         post.increaseViewCount();
+    }
+
+    // 검색 메서드
+    @Transactional(readOnly = true)
+    public Page<PostListResponse> searchPosts(PostSearchCondition condition, Pageable pageable) {
+        Page<Post> posts = postRepository.searchPosts(condition, pageable);
+        return posts.map(PostListResponse::from);
     }
 
 }
