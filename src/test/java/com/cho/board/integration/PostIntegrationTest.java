@@ -174,7 +174,7 @@ class PostIntegrationTest {
             PostFixture.createPost("조회수 테스트", "내용", testUser, testCategory)
         );
 
-        int initialViewCount = post.getViewCount();
+        Long initialViewCount = post.getViewCount();
 
         // when & then
         mockMvc.perform(get("/posts/{id}", post.getId()))
