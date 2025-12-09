@@ -23,9 +23,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.web.bind.annotation.BindParam;
 
 @Entity
-@Table(name = "Posts")
+@Table(name = "posts")
 @Getter
 @Builder
 @AllArgsConstructor
@@ -62,6 +63,7 @@ public class Post extends BaseEntity {
     private Category category;
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<Comment> comments = new ArrayList<>();
 
     public void update(String title, String content, Category category) {
@@ -83,5 +85,24 @@ public class Post extends BaseEntity {
 
     public boolean isAuthor(Long userId) {
         return this.author.getId().equals(userId);
+    }
+
+    // PostImage 관련 필드
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<PostImage> images = new ArrayList<>();
+
+    public void addImage(PostImage image) {
+        images.add(image);
+        image.setPost(this);
+    }
+
+    public void removeImage(PostImage image) {
+        images.remove(image);
+        image.setPost(null);
+    }
+
+    public void clearImages() {
+        images.clear();
     }
 }

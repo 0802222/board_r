@@ -4,10 +4,12 @@ import com.cho.board.user.entity.Role;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserUpdateRequest {
@@ -27,6 +29,7 @@ public class UserUpdateRequest {
 
     private String profileImage;
 
+    @Builder.Default
     private Role role = Role.USER;
 
 }

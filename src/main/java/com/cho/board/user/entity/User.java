@@ -46,7 +46,7 @@ public class User extends BaseEntity {
     @Column(nullable = false, length = 255)
     private String password;
 
-    @Column
+    @Column(name = "profile_image")
     private String profileImage;
 
     @Column(nullable = false)
@@ -60,7 +60,7 @@ public class User extends BaseEntity {
     @Column
     private int loginCount;
 
-    public void updateProfile(String nickname, String profileImage) {
+    public void updateNickname(String nickname) {
         if (nickname != null) {
             if (nickname.isBlank()) {
                 throw new IllegalArgumentException("Nickname cannot be empty");
@@ -70,7 +70,9 @@ public class User extends BaseEntity {
             }
             this.nickname = nickname;
         }
+    }
 
+    public void updateProfileImage(String profileImage) {
         if (profileImage != null) {
             this.profileImage = profileImage;
         }
@@ -86,8 +88,10 @@ public class User extends BaseEntity {
     }
 
     @OneToMany(mappedBy = "author")
+    @Builder.Default
     private List<Post> posts = new ArrayList<>();
 
     @OneToMany(mappedBy = "author")
+    @Builder.Default
     private List<Comment> comments = new ArrayList<>();
 }

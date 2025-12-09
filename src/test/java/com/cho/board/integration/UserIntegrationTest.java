@@ -66,10 +66,10 @@ class UserIntegrationTest {
                 .content(objectMapper.writeValueAsString(request)))
             .andDo(print())
             .andExpect(status().isCreated())  // 201로 변경
-            .andExpect(jsonPath("$.name").value("홍길동"))
-            .andExpect(jsonPath("$.nickname").value("길동이"))
-            .andExpect(jsonPath("$.email").value("test@example.com"))
-            .andExpect(jsonPath("$.password").doesNotExist());
+            .andExpect(jsonPath("$.data.name").value("홍길동"))
+            .andExpect(jsonPath("$.data.nickname").value("길동이"))
+            .andExpect(jsonPath("$.data.email").value("test@example.com"))
+            .andExpect(jsonPath("$.data.password").doesNotExist());
 
         // DB 검증
         @SuppressWarnings("unchecked")
@@ -153,9 +153,9 @@ class UserIntegrationTest {
         mockMvc.perform(get("/users"))
             .andDo(print())
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.length()").value(2))
-            .andExpect(jsonPath("$[0].email").value("user1@example.com"))
-            .andExpect(jsonPath("$[1].email").value("user2@example.com"));
+            .andExpect(jsonPath("$.data.length()").value(2))
+            .andExpect(jsonPath("$.data[0].email").value("user1@example.com"))
+            .andExpect(jsonPath("$.data[1].email").value("user2@example.com"));
     }
 
     @Test
@@ -168,10 +168,10 @@ class UserIntegrationTest {
         mockMvc.perform(get("/users/{id}", user.getId()))
             .andDo(print())
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").value(user.getId()))
-            .andExpect(jsonPath("$.name").value("테스터"))
-            .andExpect(jsonPath("$.nickname").value("테스트닉"))
-            .andExpect(jsonPath("$.email").value("test@example.com"));
+            .andExpect(jsonPath("$.data.id").value(user.getId()))
+            .andExpect(jsonPath("$.data.name").value("테스터"))
+            .andExpect(jsonPath("$.data.nickname").value("테스트닉"))
+            .andExpect(jsonPath("$.data.email").value("test@example.com"));
     }
 
     @Test
@@ -193,11 +193,11 @@ class UserIntegrationTest {
         String originalEmail = user.getEmail();
 
         UserUpdateRequest request = new UserUpdateRequest(
-            "신이름",  // name은 변경 안 됨 (무시됨)
-            "신닉네임",  // nickname만 변경됨
-            "new@example.com",  // email은 변경 안 됨 (무시됨)
-            null,  // password는 null
-            "/images/new-profile.jpg",  // profileImage 변경됨
+            "신이름",
+            "신닉네임",
+            "new@example.com",
+            null,
+            null,
             Role.USER
         );
 
@@ -207,24 +207,22 @@ class UserIntegrationTest {
                 .content(objectMapper.writeValueAsString(request)))
             .andDo(print())
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.name").value(originalName))  // ← 변경 안 됨!
-            .andExpect(jsonPath("$.nickname").value("신닉네임"))  // ← 변경됨!
-            .andExpect(jsonPath("$.email").value(originalEmail))  // ← 변경 안 됨!
-            .andExpect(jsonPath("$.profileImage").value("/images/new-profile.jpg"));  // ← 변경됨!
+            .andExpect(jsonPath("$.data.name").value(originalName))
+            .andExpect(jsonPath("$.data.nickname").value("신닉네임"))
+            .andExpect(jsonPath("$.data.email").value(originalEmail));
 
         // DB 검증
         @SuppressWarnings("unchecked")
         Optional<User> optionalUser = (Optional<User>) userRepository.findById(userId);
         assertThat(optionalUser).isPresent();
         User updatedUser = optionalUser.get();
-        assertThat(updatedUser.getName()).isEqualTo(originalName);  // 그대로
-        assertThat(updatedUser.getNickname()).isEqualTo("신닉네임");  // 변경됨
-        assertThat(updatedUser.getEmail()).isEqualTo(originalEmail);  // 그대로
-        assertThat(updatedUser.getProfileImage()).isEqualTo("/images/new-profile.jpg");  // 변경됨
+        assertThat(updatedUser.getName()).isEqualTo(originalName);
+        assertThat(updatedUser.getNickname()).isEqualTo("신닉네임");
+        assertThat(updatedUser.getEmail()).isEqualTo(originalEmail);
     }
 
     @Test
-    @DisplayName("회원 정보 부분 수정 - nickname만 수정")
+    @DisplayName("회원 정보 부분 수정 - nickname 만 수정")
     void updateUser_PartialUpdate() throws Exception {
         // given
         User user = userRepository.save(UserFixture.createDefaultUser());
@@ -244,9 +242,9 @@ class UserIntegrationTest {
                 .content(objectMapper.writeValueAsString(request)))
             .andDo(print())
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.name").value("테스터"))
-            .andExpect(jsonPath("$.nickname").value("신닉네임"))
-            .andExpect(jsonPath("$.email").value("test@example.com"));
+            .andExpect(jsonPath("$.data.name").value("테스터"))
+            .andExpect(jsonPath("$.data.nickname").value("신닉네임"))
+            .andExpect(jsonPath("$.data.email").value("test@example.com"));
     }
 
     @Test
@@ -306,7 +304,7 @@ class UserIntegrationTest {
                 .content(objectMapper.writeValueAsString(request)))
             .andDo(print())
             .andExpect(status().isCreated())  // 201로 변경
-            .andExpect(jsonPath("$.profileImage").value("/images/profile.jpg"));
+            .andExpect(jsonPath("$.data.profileImage").value("/images/profile.jpg"));
 
         // DB 검증
         @SuppressWarnings("unchecked")

@@ -1,0 +1,49 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: board-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 12345678
+      MYSQL_DATABASE: board_db
+      MYSQL_USER: board_user
+      MYSQL_PASSWORD: board1234
+      TZ: Asia/Seoul
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - board-network
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: ghcr.io/0802222/board_r/board-staging:latest
+    container_name: board-app
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      JDBC_DATABASE_URL: jdbc:mysql://mysql:3306/board_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+      JDBC_DATABASE_USERNAME: board_user
+      JDBC_DATABASE_PASSWORD: board1234
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - board-network
+    volumes:
+      - ./uploads:/app/uploads
+
+volumes:
+  mysql-data:
+
+networks:
+  board-network:
+    driver: bridge
