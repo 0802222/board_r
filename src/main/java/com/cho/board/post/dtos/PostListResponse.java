@@ -11,7 +11,7 @@ public class PostListResponse {
 
     private Long id;
     private String title;
-    private int viewCount;
+    private Long viewCount;
     private String authorName;
     private String categoryType;
     private LocalDateTime createdAt;

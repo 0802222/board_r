@@ -7,13 +7,18 @@ import static org.springframework.util.StringUtils.hasText;
 
 import com.cho.board.post.dtos.PostSearchCondition;
 import com.cho.board.post.entity.Post;
+import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Order;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 
 @RequiredArgsConstructor
@@ -68,4 +73,70 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
     private BooleanExpression categoryIdEq(Long categoryId) {
         return categoryId != null ? post.category.id.eq(categoryId) : null;
     }
+
+
+    @Override
+    public Page<Post> searchPostsWithFilters(String keyword, Long categoryId, Pageable pageable) {
+        BooleanBuilder builder = new BooleanBuilder();
+
+        if (keyword != null && !keyword.isBlank()) {
+            builder.and(
+                post.title.containsIgnoreCase(keyword)
+                    .or(post.content.containsIgnoreCase(keyword))
+                    .or(post.author.name.containsIgnoreCase(keyword))
+            );
+        }
+
+        if (categoryId != null) {
+            builder.and(post.category.id.eq(categoryId));
+        }
+
+        List<Post> content = queryFactory
+            .selectFrom(post)
+            .leftJoin(post.author).fetchJoin()
+            .leftJoin(post.category).fetchJoin()
+            .where(builder)
+            .offset(pageable.getOffset())
+            .limit(pageable.getPageSize())
+            .orderBy(getOrderSpecifiers(pageable.getSort()))
+            .fetch();
+
+        Long total = queryFactory
+            .select(post.count())
+            .from(post)
+            .where(builder)
+            .fetchOne();
+
+        return new PageImpl<>(content, pageable, total != null ? total : 0);
+    }
+
+    private OrderSpecifier<?>[] getOrderSpecifiers(Sort sort) {
+        List<OrderSpecifier<?>> orders = new ArrayList<>();
+
+        if (sort.isEmpty()) {
+            // 기본 정렬 : 최신순
+            orders.add(post.createdAt.desc());
+        } else {
+            sort.forEach(order -> {
+                Order direction = order.isAscending() ? Order.ASC : Order.DESC;
+                String property = order.getProperty();
+
+                switch (property) {
+                    case "createdAt":
+                        orders.add(new OrderSpecifier<>(direction, post.createdAt));
+                        break;
+                    case "viewCount":
+                        orders.add(new OrderSpecifier<>(direction, post.viewCount));
+                        break;
+                    case "title":
+                        orders.add(new OrderSpecifier<>(direction, post.title));
+                        break;
+                    default:
+                        orders.add(post.createdAt.desc());
+                }
+            });
+        }
+        return orders.toArray(new OrderSpecifier[0]);
+    }
+
 }

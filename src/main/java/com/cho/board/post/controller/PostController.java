@@ -59,9 +59,7 @@ public class PostController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<PostDetailResponse>> findById(@PathVariable Long id) {
-        postService.increaseViewCount(id);
-
-        Post post = postService.findById(id);
+        Post post = postService.findByIdWithViewCount(id);
         return ResponseEntity.ok(ApiResponse.success(PostDetailResponse.from(post)));
     }
 

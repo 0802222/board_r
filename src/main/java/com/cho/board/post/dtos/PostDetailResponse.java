@@ -13,7 +13,7 @@ public class PostDetailResponse {
     private Long id;
     private String title;
     private String content;
-    private int viewCount;
+    private Long viewCount;
 
     private Long authorId;
     private String authorName;
