@@ -11,6 +11,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -26,7 +27,13 @@ import lombok.NoArgsConstructor;
 import org.springframework.web.bind.annotation.BindParam;
 
 @Entity
-@Table(name = "posts")
+@Table(
+    name = "posts",
+    indexes = {
+        @Index(name = "idx_post_created_at", columnList = "created_at"),
+        @Index(name = "idx_post_view_count", columnList = "view_count"),
+        @Index(name = "idx_post_category_id", columnList = "category_id")
+    })
 @Getter
 @Builder
 @AllArgsConstructor
@@ -44,8 +51,9 @@ public class Post extends BaseEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Column
-    private int viewCount;
+    @Builder.Default
+    @Column(nullable = false)
+    private Long viewCount = 0L;
 
     @Column
     private LocalDateTime scheduledAt;

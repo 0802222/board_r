@@ -58,6 +58,16 @@ public class PostService {
             .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.POST_NOT_FOUND, "게시글을 찾을 수 없습니다. ID: " + id));
     }
 
+    // 상세 조회 (조회수 증가 로직 포함)
+    public Post findByIdWithViewCount(Long id) {
+        Post post = postRepository.findById(id)
+            .orElseThrow(
+                () -> new ResourceNotFoundException(ErrorCode.POST_NOT_FOUND, "게시글을 찾을 수 없습니다. ID : " + id));
+        post.increaseViewCount();
+
+        return post;
+    }
+
     public Post update(Long postId, Long userId, PostUpdateRequest request) {
         Post post = findById(postId);
 
@@ -95,6 +105,16 @@ public class PostService {
     @Transactional(readOnly = true)
     public Page<PostListResponse> searchPosts(PostSearchCondition condition, Pageable pageable) {
         Page<Post> posts = postRepository.searchPosts(condition, pageable);
+        return posts.map(PostListResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PostListResponse> searchPostsWithFilters(
+        String keyword,
+        Long categoryId,
+        Pageable pageable
+    ) {
+        Page<Post> posts = postRepository.searchPostsWithFilters(keyword, categoryId, pageable);
         return posts.map(PostListResponse::from);
     }
 
