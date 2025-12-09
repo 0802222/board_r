@@ -1,0 +1,11 @@
+### 최적화된 게시글 목록 조회 (before)
+GET http://localhost:8080/posts?page=0&size=10
+Accept: application/json
+
+### 최적화된 게시글 목록 조회 (after - EntityGraph)
+GET http://localhost:8080/posts/optimized?page=0&size=10
+Accept: application/json
+
+### 최적화된 게시글 상세 조회
+GET http://localhost:8080/posts/2/optimized
+Accept: application/json
