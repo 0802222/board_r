@@ -15,6 +15,7 @@ import com.cho.board.global.exception.ResourceNotFoundException;
 import com.cho.board.category.repository.CategoryRepository;
 import com.cho.board.post.repository.PostRepository;
 import com.cho.board.user.repository.UserRepository;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -118,4 +119,31 @@ public class PostService {
         return posts.map(PostListResponse::from);
     }
 
+
+    // EntityGraph 사용
+    public Page<PostListResponse> getPostsOptimized(Pageable pageable) {
+        return postRepository.findAllWithUserAndCategory(pageable)
+            .map(PostListResponse::from);
+    }
+
+    public PostDetailResponse getPostByIdOptimized(Long id) {
+        Post post = postRepository.findWithUserAndCategoryById(id)
+            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.POST_NOT_FOUND, "게시글을 찾을 수 없습니다."));
+        return PostDetailResponse.from(post);
+    }
+
+    // Fetch Join 사용
+    public List<PostListResponse> getPostsWithFetchJoin() {
+        return postRepository.findAllWithFetchJoin()
+            .stream()
+            .map(PostListResponse::from)
+            .toList();
+    }
+
+    public PostDetailResponse getPostByIdWithFetchJoin(Long id) {
+        Post post = postRepository.findByIdWithFetchJoin(id)
+            .orElseThrow(
+                () -> new ResourceNotFoundException(ErrorCode.POST_NOT_FOUND, "게시글을 찾을 수 없습니다."));
+        return PostDetailResponse.from(post);
+    }
 }

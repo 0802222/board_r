@@ -90,4 +90,33 @@ public class PostController {
         Page<PostListResponse> result = postService.searchPosts(condition, pageable);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
+
+    // N + 1 문제 해결 : @Entity Graph 사용
+    // User, Category 를 LEFT JOIN 으로 한 번에 조회
+    @GetMapping("/optimized")
+    public ResponseEntity<Page<PostListResponse>> getPostsOptimized(
+        @PageableDefault(size = 10) Pageable pageable) {
+        return ResponseEntity.ok(postService.getPostsOptimized(pageable));
+    }
+
+    @GetMapping("/{id}/optimized")
+    public ResponseEntity<PostDetailResponse> getPostByIdOptimized(@PathVariable Long id) {
+        return ResponseEntity.ok(postService.getPostByIdOptimized(id));
+    }
+
+    // N+1 문제 해결: Fetch Join 사용
+    // JPQL 로 직접 JOIN 제어, 복잡한 조건 추가 가능
+    @GetMapping("/fetch-join")
+    public ResponseEntity<ApiResponse<List<PostListResponse>>> getPostsWithFetchJoin() {
+        List<PostListResponse> posts = postService.getPostsWithFetchJoin();
+        return ResponseEntity.ok(ApiResponse.success(posts, "게시글 목록 조회 성공"));
+    }
+
+    @GetMapping("/{id}/fetch-join")
+    public ResponseEntity<ApiResponse<PostDetailResponse>> getPostByIdWithFetchJoin(
+        @PathVariable Long id) {
+        PostDetailResponse post = postService.getPostByIdWithFetchJoin(id);
+        return ResponseEntity.ok(ApiResponse.success(post, "게시글 조회 성공"));
+    }
+
 }
