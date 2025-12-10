@@ -18,7 +18,9 @@ import com.cho.board.post.entity.Post;
 import com.cho.board.post.repository.PostRepository;
 import com.cho.board.user.entity.User;
 import com.cho.board.user.repository.UserRepository;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,7 +76,7 @@ class PostIntegrationTest {
         String jsonRequest = String.format("""
             {
                 "title": "테스트 제목",
-                "content": "테스트 내용입니다.",
+                "content": "테스트 내용",
                 "categoryId": %d
             }
             """, testCategory.getId());
@@ -86,15 +88,33 @@ class PostIntegrationTest {
                 .content(jsonRequest))
             .andDo(print())
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.title").value("테스트 제목"))
-            .andExpect(jsonPath("$.content").value("테스트 내용입니다."));
+
+            // ApiResponse 구조 검증
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.error").doesNotExist())
+
+            // PostDetailResponse 검증
+            .andExpect(jsonPath("$.data.id").exists())
+            .andExpect(jsonPath("$.data.title").value("테스트 제목"))
+            .andExpect(jsonPath("$.data.content").value("테스트 내용"))
+            .andExpect(jsonPath("$.data.authorName").value(testUser.getName()))
+            .andExpect(jsonPath("$.data.categoryType").value(testCategory.getCategoryType().name()))
+            .andExpect(jsonPath("$.data.viewCount").value(0))
+            .andExpect(jsonPath("$.data.createdAt").exists())
+            .andExpect(jsonPath("$.data.updatedAt").exists())
+            .andExpect(jsonPath("$.data.images").isEmpty());
 
         // DB 검증
         List<Post> posts = postRepository.findAll();
         assertThat(posts).hasSize(1);
         Post savedPost = posts.get(0);
         assertThat(savedPost.getTitle()).isEqualTo("테스트 제목");
+        assertThat(savedPost.getContent()).isEqualTo("테스트 내용");
         assertThat(savedPost.getAuthor().getId()).isEqualTo(testUser.getId());
+        assertThat(savedPost.getViewCount()).isEqualTo(0);
+        assertThat(savedPost.getUpdatedAt()).isNotNull();
+        assertThat(savedPost.getUpdatedAt()).isEqualTo(savedPost.getCreatedAt());
+
     }
 
     @Test
@@ -151,10 +171,11 @@ class PostIntegrationTest {
                 .param("size", "10"))
             .andDo(print())
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.content.length()").value(10))
-            .andExpect(jsonPath("$.totalElements").value(15))
-            .andExpect(jsonPath("$.totalPages").value(2))
-            .andExpect(jsonPath("$.last").value(false));
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.content.length()").value(10))
+            .andExpect(jsonPath("$.data.totalElements").value(15))
+            .andExpect(jsonPath("$.data.totalPages").value(2))
+            .andExpect(jsonPath("$.data.last").value(false));
 
         // 두 번째 페이지 (5개)
         mockMvc.perform(get("/posts")
@@ -162,8 +183,9 @@ class PostIntegrationTest {
                 .param("size", "10"))
             .andDo(print())
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.content.length()").value(5))
-            .andExpect(jsonPath("$.last").value(true));
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.content.length()").value(5))
+            .andExpect(jsonPath("$.data.last").value(true));
     }
 
     @Test
@@ -180,7 +202,8 @@ class PostIntegrationTest {
         mockMvc.perform(get("/posts/{id}", post.getId()))
             .andDo(print())
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.viewCount").value(initialViewCount + 1));
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.viewCount").value(initialViewCount + 1));
 
         // DB 검증
         Post updatedPost = postRepository.findById(post.getId())
@@ -196,6 +219,8 @@ class PostIntegrationTest {
             PostFixture.createPost("원래 제목", "원래 내용", testUser, testCategory)
         );
 
+        Thread.sleep(100);
+
         String jsonRequest = """
             {
                 "title": "수정된 제목",
@@ -210,14 +235,49 @@ class PostIntegrationTest {
                 .content(jsonRequest))
             .andDo(print())
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.title").value("수정된 제목"))
-            .andExpect(jsonPath("$.content").value("수정된 내용"));
+
+            // ApiResponse 구조 검증
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.error").doesNotExist())
+
+            // 수정된 내용 검증
+            .andExpect(jsonPath("$.data.title").value("수정된 제목"))
+            .andExpect(jsonPath("$.data.content").value("수정된 내용"))
+            .andExpect(jsonPath("$.data.updatedAt").exists())
+
+            // updatedAt > createdAt 검증
+            .andExpect(result -> {
+                String json = result.getResponse().getContentAsString();
+                JsonNode node = objectMapper.readTree(json);
+
+                LocalDateTime createdAt = LocalDateTime.parse(
+                    node.get("data").get("createdAt").asText()
+                );
+                LocalDateTime updatedAt = LocalDateTime.parse(
+                    node.get("data").get("updatedAt").asText()
+                );
+
+                assertThat(updatedAt).isAfter(createdAt);
+            });
 
         // DB 검증
         Post updatedPost = postRepository.findById(post.getId())
             .orElseThrow(() -> new AssertionError("Post not found"));
+
+        // 변경된 필드
         assertThat(updatedPost.getTitle()).isEqualTo("수정된 제목");
         assertThat(updatedPost.getContent()).isEqualTo("수정된 내용");
+        assertThat(updatedPost.getUpdatedAt()).isAfterOrEqualTo(post.getCreatedAt());
+
+        // 변경되지 않은 필드
+        assertThat(updatedPost.getId()).isEqualTo(post.getId());
+        assertThat(updatedPost.getAuthor().getId()).isEqualTo(testUser.getId());
+        assertThat(updatedPost.getCategory().getId()).isEqualTo(testCategory.getId());
+        assertThat(updatedPost.getViewCount()).isEqualTo(post.getViewCount());
+
+        // 타임스탬프 검증
+        assertThat(updatedPost.getCreatedAt()).isEqualTo(post.getCreatedAt());
+        assertThat(updatedPost.getUpdatedAt()).isAfterOrEqualTo(post.getCreatedAt());
     }
 
     @Test
@@ -241,8 +301,9 @@ class PostIntegrationTest {
                 .content(jsonRequest))
             .andDo(print())
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.title").value("수정된 제목만"))
-            .andExpect(jsonPath("$.content").value("원래 내용"));
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.title").value("수정된 제목만"))
+            .andExpect(jsonPath("$.data.content").value("원래 내용"));
     }
 
     @Test
@@ -359,6 +420,7 @@ class PostIntegrationTest {
         mockMvc.perform(get("/posts"))
             .andDo(print())
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.content.length()").value(3));
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.content.length()").value(3));
     }
 }

@@ -68,7 +68,7 @@ public class FileStorageUtil {
             // 경로 traversal 공격 방지
             if (originalFilename.contains("..")) {
                 throw new FileStorageException(
-                    ErrorCode.FILE_INVALID_PATH + ": " + originalFilename);
+                    ErrorCode.FILE_INVALID_PATH, originalFilename);
             }
 
             // 4. 파일 저장
