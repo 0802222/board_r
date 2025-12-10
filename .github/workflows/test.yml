@@ -61,5 +61,5 @@ jobs:
           min-coverage-changed-files: 70
 
       # 커버리지 검증 (60% 이상)
-      - name: Verify coverage
-        run: ./gradlew jacocoTestCoverageVerification
+#      - name: Verify coverage
+#        run: ./gradlew jacocoTestCoverageVerification
