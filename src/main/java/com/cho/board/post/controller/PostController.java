@@ -94,14 +94,14 @@ public class PostController {
     // N + 1 문제 해결 : @Entity Graph 사용
     // User, Category 를 LEFT JOIN 으로 한 번에 조회
     @GetMapping("/optimized")
-    public ResponseEntity<Page<PostListResponse>> getPostsOptimized(
+    public ResponseEntity<ApiResponse<Page<PostListResponse>>> getPostsOptimized(
         @PageableDefault(size = 10) Pageable pageable) {
-        return ResponseEntity.ok(postService.getPostsOptimized(pageable));
+        return ResponseEntity.ok(ApiResponse.success(postService.getPostsOptimized(pageable)));
     }
 
     @GetMapping("/{id}/optimized")
-    public ResponseEntity<PostDetailResponse> getPostByIdOptimized(@PathVariable Long id) {
-        return ResponseEntity.ok(postService.getPostByIdOptimized(id));
+    public ResponseEntity<ApiResponse<PostDetailResponse>> getPostByIdOptimized(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(postService.getPostByIdOptimized(id)));
     }
 
     // N+1 문제 해결: Fetch Join 사용

@@ -2,7 +2,7 @@ package com.cho.board.global.constants;
 
 public final class PageConstants {
 
-    public PageConstants() {
+    private PageConstants() {
         throw new AssertionError("Constants class cannot be instantiated");
     }
 

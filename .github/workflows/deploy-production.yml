@@ -51,64 +51,98 @@ jobs:
           key: ${{ secrets.PROD_SSH_KEY }}
           port: 22
           script: |
+            set -e
+            
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             
-            if docker ps | grep -q board-blue; then
+            if docker ps --format '{{.Names}}' | grep -q "^board-blue$"; then
               CURRENT="blue"
               CURRENT_PORT=8080
               NEW="green"
               NEW_PORT=8081
-            else
+            elif docker ps --format '{{.Names}}' | grep -q "^board-green$"; then
               CURRENT="green"
               CURRENT_PORT=8081
               NEW="blue"
               NEW_PORT=8080
+            else
+              CURRENT=""
+              CURRENT_PORT=""
+              NEW="blue"
+              NEW_PORT=8080
+              echo "Initial deployment - starting with Blue"
             fi
             
-            echo "Current: $CURRENT (port $CURRENT_PORT)"
+            echo "Current: ${CURRENT:-none} (port ${CURRENT_PORT:-none})"
             echo "Deploying to: $NEW (port $NEW_PORT)"
             
-            docker stop board-$NEW || true
-            docker rm board-$NEW || true
+            docker stop board-$NEW 2>/dev/null || true
+            docker rm -f board-$NEW 2>/dev/null || true
             
             docker run -d \
               --name board-$NEW \
               --restart unless-stopped \
+              --network bridge \
               -p $NEW_PORT:8080 \
               -e SPRING_PROFILES_ACTIVE=prod \
               -e JDBC_DATABASE_URL=${{ secrets.PROD_DB_URL }} \
               -e JDBC_DATABASE_USERNAME=${{ secrets.PROD_DB_USERNAME }} \
               -e JDBC_DATABASE_PASSWORD=${{ secrets.PROD_DB_PASSWORD }} \
               -v /home/ubuntu/board-uploads:/app/uploads \
+              --health-cmd="curl -f http://localhost:8080/actuator/health || exit 1" \
+              --health-interval=10s \
+              --health-timeout=5s \
+              --health-retries=3 \
               ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             
             echo "Waiting for new container to be healthy..."
-            for i in {1..12}; do
-              if curl -f http://localhost:$NEW_PORT/actuator/health; then
+            TIMEOUT=120
+            ELAPSED=0
+            while [ $ESAPSED -lt $TIMEOUT ]; do
+              if docker inspect --format='{{.State.Health.Status}}' board-$NEW 2>/dev/null | grep -q "healthy"; then
                 echo "✅ New container is healthy!"
-                break
+                break;
               fi
-              if [ $i -eq 12 ]; then
-                echo "❌ Health check failed"
-                docker logs board-$NEW
+            
+              if [ $ELAPSED -ge $TIMEOUT ]; then
+                echo "❌ Health check timeout after ${TIMEOUT}s"
+                docker logs --tail 50 board-$NEW
+                docker stop board-$NEW
+                docker rm board-$NEW
                 exit 1
               fi
-              echo "Retry $i/12..."
+              
+              echo "Retry $((ELAPSED/5))/24..."
               sleep 5
+              ELAPSED=$((ELAPSED + 5))
             done
             
-            sudo bash /home/ubuntu/scripts/switch-nginx.sh $NEW_PORT
+            if ! sudo bash /home/ubuntu/scripts/switch-nginx.sh $NEW_PORT; then
+              echo  "❌ Nginx switch failed"
+              docker stop board-$NEW
+              docker rm board-$NEW
+              exit 1
+            fi
             
-            sudo nginx -t && sudo systemctl reload nginx
+            if ! sudo nginx -t; then
+              echo "❌ Nginx config test failed"
+              exit 1
+            fi
             
+            sudo systemctl reload nginx
             echo "✅ Traffic switched to $NEW (port $NEW_PORT)"
             
             sleep 30
-            docker stop board-$CURRENT || true
-            docker rm board-$CURRENT || true
+            
+            if [ -n "$CURRENT" ]; then
+              echo "Stopping old container: $CURRENT"
+              docker stop board-$CURRENT 2>/dev/null || true
+              docker rm board-$CURRENT 2>/dev/null || true
+            fi
             
             docker image prune -af
             
             echo "🎉 Blue-Green deployment completed successfully!"
+            echo "Active: $NEW (port $NEW_PORT)"

@@ -22,7 +22,7 @@ public class PostDetailResponse extends PostBaseResponse {
             .id(post.getId())
             .title(post.getTitle())
             .authorName(post.getAuthor().getName())
-            .categoryType(post.getCategory().getCategoryType().getDescription())
+            .categoryType(post.getCategory().getCategoryType())
             .createdAt(post.getCreatedAt())
             .viewCount(post.getViewCount())
 
