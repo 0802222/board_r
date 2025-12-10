@@ -63,7 +63,21 @@ jobs:
             docker-compose up -d
 
             # 헬스 체크 (compose 에서 8080을 쓴다고 가정)
-            sleep 30
-            curl -f http://localhost:8080/actuator/health || exit 1
+            echo "Waiting for app to be healthy..."
+            for i in {1..12}; do
+              if curl -f http://localhost:8080/actuator/health; then
+                echo "✅ Staging app is healthy!"
+                break
+              fi
+
+              if [ $i -eq 12 ]; then
+                echo "❌ Health check failed on staging"
+                docker-compose logs --tail=50
+                exit 1
+              fi
+
+              echo "Retry $i/12..."
+              sleep 5
+            done
 
             docker image prune -af
