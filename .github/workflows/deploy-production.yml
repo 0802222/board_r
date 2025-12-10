@@ -100,24 +100,25 @@ jobs:
             echo "Waiting for new container to be healthy..."
             TIMEOUT=120
             ELAPSED=0
-            while [ $ESAPSED -lt $TIMEOUT ]; do
+            
+            while [ $ELAPSED -lt $TIMEOUT ]; do
               if docker inspect --format='{{.State.Health.Status}}' board-$NEW 2>/dev/null | grep -q "healthy"; then
                 echo "✅ New container is healthy!"
                 break;
               fi
+              
+              echo "Waiting... $((ELAPSED/5))/24 attempts"
+              sleep 5
+              ELAPSED=$((ELAPSED + 5))
+            done
             
-              if [ $ELAPSED -ge $TIMEOUT ]; then
+            if [ $ELAPSED -ge $TIMEOUT ]; then
                 echo "❌ Health check timeout after ${TIMEOUT}s"
                 docker logs --tail 50 board-$NEW
                 docker stop board-$NEW
                 docker rm board-$NEW
                 exit 1
               fi
-              
-              echo "Retry $((ELAPSED/5))/24..."
-              sleep 5
-              ELAPSED=$((ELAPSED + 5))
-            done
             
             if ! sudo bash /home/ubuntu/scripts/switch-nginx.sh $NEW_PORT; then
               echo  "❌ Nginx switch failed"
