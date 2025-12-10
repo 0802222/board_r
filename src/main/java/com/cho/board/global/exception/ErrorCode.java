@@ -37,7 +37,16 @@ public enum ErrorCode {
     NICKNAME_ALREADY_EXISTS(HttpStatus.CONFLICT, "4090", "이미 존재하는 닉네임입니다"),
 
     // ========== 500 Internal Server Error ==========
-    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "5000", "서버 내부 오류가 발생했습니다");
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "5000", "서버 내부 오류가 발생했습니다"),
+
+    // 파일 관련 에러
+    FILE_EMPTY(HttpStatus.BAD_REQUEST, "4001", "빈 파일은 저장할 수 없습니다"),
+    FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "4001", "파일 크기가 너무 큽니다. 최대 10MB 까지 업로드 가능합니다"),
+    FILE_UNSUPPORTED_FORMAT(HttpStatus.BAD_REQUEST, "4001",
+        "지원하지 않는 파일 형식입니다. (jpg, jpeg, png, gif, webp, heic만 가능)"),
+    FILE_NO_EXTENSION(HttpStatus.BAD_REQUEST, "4001", "파일 확장자를 찾을 수 없습니다"),
+    FILE_INVALID_PATH(HttpStatus.BAD_REQUEST, "4001", "파일명에 부적절한 경로가 포함되어 있습니다"),
+    FILE_MAX_IMAGES_EXCEEDED(HttpStatus.BAD_REQUEST, "4001", "게시글당 최대 10개의 이미지만 업로드할 수 있습니다");
 
     private final HttpStatus status;
     private final String code;

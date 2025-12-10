@@ -1,17 +1,17 @@
 package com.cho.board.global.util;
 
+import static com.cho.board.global.constants.FileConstants.ALLOWED_IMAGE_EXTENSIONS;
+import static com.cho.board.global.constants.FileConstants.MAX_FILE_SIZE;
+
 import com.cho.board.global.exception.ErrorCode;
 import com.cho.board.global.exception.FileStorageException;
 import com.cho.board.global.exception.ResourceNotFoundException;
-import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Arrays;
-import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -25,12 +25,6 @@ public class FileStorageUtil {
 
     private final Path profileStorageLocation;
     private final Path postStorageLocation;
-
-    // 허용되는 이미지 확장자
-    private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png",
-        "gif", "webp", "heic");
-
-    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
 
     public FileStorageUtil(
         @Value("${file.profile-dir}") String profileDir,
@@ -73,7 +67,8 @@ public class FileStorageUtil {
         try {
             // 경로 traversal 공격 방지
             if (originalFilename.contains("..")) {
-                throw new FileStorageException("파일명에 부적절한 경로가 포함되어 있습니다.: " + originalFilename);
+                throw new FileStorageException(
+                    ErrorCode.FILE_INVALID_PATH + ": " + originalFilename);
             }
 
             // 4. 파일 저장
@@ -92,25 +87,24 @@ public class FileStorageUtil {
     // 파일 검증
     private void validateFile(MultipartFile file) {
         if (file.isEmpty()) {
-            throw new FileStorageException("빈 파일은 저장할 수 없습니다.");
+            throw new FileStorageException(ErrorCode.FILE_EMPTY);
         }
 
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new FileStorageException("파일 크기가 너무 큽니다. 최대 10 MB 까지 업로드 가능합니다.");
+            throw new FileStorageException(ErrorCode.FILE_TOO_LARGE);
         }
 
         String filename = file.getOriginalFilename();
         String extension = getFileExtension(filename);
 
-        if (!ALLOWED_EXTENSIONS.contains(extension.toLowerCase())) {
-            throw new FileStorageException(
-                "지원하지 않는 파일 형식 입니다. (jpg, jpeg, png, gif, webp, heic 만 가능");
+        if (!ALLOWED_IMAGE_EXTENSIONS.contains(extension.toLowerCase())) {
+            throw new FileStorageException(ErrorCode.FILE_UNSUPPORTED_FORMAT);
         }
     }
 
     private String getFileExtension(String filename) {
         if (filename == null || !filename.contains(".")) {
-            throw new FileStorageException("파일 확장자를 찾을 수 없습니다.");
+            throw new FileStorageException(ErrorCode.FILE_NO_EXTENSION);
         }
         return filename.substring(filename.lastIndexOf(".") + 1);
     }
