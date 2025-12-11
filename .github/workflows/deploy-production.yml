@@ -128,12 +128,42 @@ jobs:
             fi
             
             if ! sudo nginx -t; then
-              echo "❌ Nginx config test failed"
+              echo "❌ Nginx config test failed - Rolling back"
+              sudo cp /etc/nginx/sites-available/default.backup \
+                      /etc/nginx/sites-available/default
+              docker stop board-$NEW
+              docker rm board-$NEW
               exit 1
             fi
             
             sudo systemctl reload nginx
             echo "✅ Traffic switched to $NEW (port $NEW_PORT)"
+            
+            echo "Verifying post-deployment health..."
+            for i in {1..5}; do
+              if ! curl -f http://localhost:$NEW_PORT/actuator/health >/dev/null 2>&1; then
+                echo "❌ Post-deployment check failed (attempt $i/5)"
+                
+                if [ -n "$CURRENT" ]; then
+                sudo bash /home/ubuntu/scripts/switch-nginx.sh $CURRENT_PORT
+                sudo systemctl reload nginx
+                fi
+                
+                docker stop board-$NEW
+                docker rm board-$NEW
+                
+                if [ -n "$CURRENT" ]; then
+                  echo "✅ Rolled back to $CURRENT (port $CURRENT_PORT)"
+                  else
+                  echo "✅ Deployment cancelled (no rollback target)"
+                fi
+                exit 1
+              fi
+              echo "✓ Health check $i/5 passed"
+              sleep 6
+            done
+              
+            echo "✅ Post-deployment verification completed"
             
             sleep 30
             
