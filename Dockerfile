@@ -22,7 +22,7 @@ RUN groupadd -r spring && useradd -r -g spring spring
 USER spring:spring
 
 # 빌드된 JAR 복사
-COPY --from=builder /app/build/libs/board-*-SNAPSHOT.jar app.jar
+COPY --from=builder /app/build/libs/board-*.jar app.jar
 
 # 헬스체크
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
