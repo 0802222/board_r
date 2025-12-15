@@ -145,6 +145,14 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.UNAUTHORIZED, "사용자를 찾을 수 없습니다.");
     }
 
+    @ExceptionHandler(CustomJwtException.class)
+    public ResponseEntity<ApiResponse<Void>> handleCustomJwtException(CustomJwtException e) {
+        log.warn("JWT 예외 발생 : {}", e.getMessage());
+
+        return ResponseEntity
+            .status(HttpStatus.UNAUTHORIZED)
+            .body(ApiResponse.error(e.getMessage()));
+    }
     // ========== 기타 예외 ==========
 
     // 그 외 모든 예외 처리
