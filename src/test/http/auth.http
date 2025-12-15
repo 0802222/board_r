@@ -46,3 +46,29 @@ Content-Type: application/json
   "email": "invalid-email",
   "password": "Test1234!@"
 }
+
+
+
+###
+### 1. 로그인
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "Test1234!@"
+}
+
+
+### 2. 인증이 필요한 API 호출
+GET http://localhost:8080/posts
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIiwiaWF0IjoxNzY1ODI1MDExLCJleHAiOjE3NjU4Mjg2MTF9.SCYBdNro4I1UJ3OkXZmfa3BwSNg_cvT5Szgb-9qjWcc
+
+
+### 3. 토큰 갱신 (AccessToken 만료 시)
+POST http://localhost:8080/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIiwiaWF0IjoxNzY1ODE1NDUzLCJleHAiOjE3NjY0MjAyNTN9.tRMxbGJiZtrf0VOfbgo05kyJBmRDK6Ln7bbMGhObhkA"
+}
