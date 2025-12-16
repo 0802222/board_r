@@ -67,25 +67,25 @@ jobs:
             cd ~
             echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
 
-            # .env 파일 생성 (환경변수에서 주입)
-            cat > .env << EOF
+            # .env 파일 생성 (docker-compose가 읽을 수 있도록)
+            cat > .env << ENVFILE
             JDBC_DATABASE_URL=$DB_URL
             JDBC_DATABASE_USERNAME=$DB_USER
             JDBC_DATABASE_PASSWORD=$DB_PASS
             JWT_SECRET=$JWT_SEC
             JWT_ACCESS_EXPIRATION=$JWT_ACCESS
             JWT_REFRESH_EXPIRATION=$JWT_REFRESH
-            EOF
+            ENVFILE
 
-            # 디버깅: .env 파일 확인 (비밀번호는 마스킹)
-            echo "=== .env file created ==="
-            cat .env | sed 's/PASSWORD=.*/PASSWORD=***MASKED***/g' | sed 's/SECRET=.*/SECRET=***MASKED***/g'
+            # 디버깅: .env 파일 내용 확인
+            echo "=== .env file contents ==="
+            cat .env
             echo "=========================="
 
             # 최신 스테이징 이미지 받아오기
             docker pull $REGISTRY/$IMAGE_NAME:latest
 
-            # docker-compose 로 재배포
+            # docker-compose 로 재배포 (.env 파일 사용)
             docker-compose down
             docker-compose up -d
 
