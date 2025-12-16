@@ -45,28 +45,45 @@ jobs:
 
       - name: Deploy to Staging Server (docker-compose)
         uses: appleboy/ssh-action@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          DB_URL: ${{ secrets.STAGING_DB_URL }}
+          DB_USER: ${{ secrets.STAGING_DB_USERNAME }}
+          DB_PASS: ${{ secrets.STAGING_DB_PASSWORD }}
+          JWT_SEC: ${{ secrets.JWT_SECRET }}
+          JWT_ACCESS: ${{ secrets.JWT_ACCESS_EXPIRATION }}
+          JWT_REFRESH: ${{ secrets.JWT_REFRESH_EXPIRATION }}
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
           port: 22
           script_stop: true
+          envs: GITHUB_TOKEN,GITHUB_ACTOR,REGISTRY,IMAGE_NAME,DB_URL,DB_USER,DB_PASS,JWT_SEC,JWT_ACCESS,JWT_REFRESH
           script: |
             cd ~
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
 
-            # .env 파일 생성 (GitHub Secrets에서 주입)
+            # .env 파일 생성 (환경변수에서 주입)
             cat > .env << EOF
-            JDBC_DATABASE_URL=${{ secrets.STAGING_DB_URL }}
-            JDBC_DATABASE_USERNAME=${{ secrets.STAGING_DB_USERNAME }}
-            JDBC_DATABASE_PASSWORD=${{ secrets.STAGING_DB_PASSWORD }}
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            JWT_ACCESS_EXPIRATION=${{ secrets.JWT_ACCESS_EXPIRATION }}
-            JWT_REFRESH_EXPIRATION=${{ secrets.JWT_REFRESH_EXPIRATION }}
+            JDBC_DATABASE_URL=$DB_URL
+            JDBC_DATABASE_USERNAME=$DB_USER
+            JDBC_DATABASE_PASSWORD=$DB_PASS
+            JWT_SECRET=$JWT_SEC
+            JWT_ACCESS_EXPIRATION=$JWT_ACCESS
+            JWT_REFRESH_EXPIRATION=$JWT_REFRESH
             EOF
 
+            # 디버깅: .env 파일 확인 (비밀번호는 마스킹)
+            echo "=== .env file created ==="
+            cat .env | sed 's/PASSWORD=.*/PASSWORD=***MASKED***/g' | sed 's/SECRET=.*/SECRET=***MASKED***/g'
+            echo "=========================="
+
             # 최신 스테이징 이미지 받아오기
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            docker pull $REGISTRY/$IMAGE_NAME:latest
 
             # docker-compose 로 재배포
             docker-compose down
