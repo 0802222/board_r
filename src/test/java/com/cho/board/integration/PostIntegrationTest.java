@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.cho.board.category.entity.Category;
 import com.cho.board.category.repository.CategoryRepository;
+import com.cho.board.config.TestSecurityConfig;
 import com.cho.board.fixture.CategoryFixture;
 import com.cho.board.fixture.PostFixture;
 import com.cho.board.fixture.UserFixture;
@@ -30,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -39,6 +41,7 @@ import org.springframework.transaction.annotation.Transactional;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
+@Import(TestSecurityConfig.class)
 class PostIntegrationTest {
 
     @Autowired
@@ -173,9 +176,10 @@ class PostIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.content.length()").value(10))
-            .andExpect(jsonPath("$.data.totalElements").value(15))
-            .andExpect(jsonPath("$.data.totalPages").value(2))
-            .andExpect(jsonPath("$.data.last").value(false));
+            .andExpect(jsonPath("$.data.page.totalElements").value(15))
+            .andExpect(jsonPath("$.data.page.totalPages").value(2))
+            .andExpect(jsonPath("$.data.page.number").value(0))
+            .andExpect(jsonPath("$.data.page.size").value(10));
 
         // 두 번째 페이지 (5개)
         mockMvc.perform(get("/posts")
@@ -185,7 +189,7 @@ class PostIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.content.length()").value(5))
-            .andExpect(jsonPath("$.data.last").value(true));
+            .andExpect(jsonPath("$.data.page.number").value(1));
     }
 
     @Test

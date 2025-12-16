@@ -29,32 +29,37 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // 1. 헤더에서 JWT 토큰 추출
-        String token = extractToken(request);
+        try {
+            // 1. 헤더에서 JWT 토큰 추출
+            String token = extractToken(request);
 
-        // 2. 토큰이 있고 유효한 경우
-        if (token != null && jwtUtil.validateToken(token)) {
+            // 2. 토큰이 있고 유효한 경우
+            if (token != null && jwtUtil.validateToken(token)) {
 
-            // 3. 토큰에서 이메일 추출
-            String email = jwtUtil.getEmailFromToken(token);
+                // 3. 토큰에서 이메일 추출
+                String email = jwtUtil.getEmailFromToken(token);
 
-            // 4. UserDetails 조회
-            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                // 4. UserDetails 조회
+                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-            // 5. 인증 객체 생성
-            UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(
-                    userDetails,
-                    null,
-                    userDetails.getAuthorities()
+                // 5. 인증 객체 생성
+                UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                        userDetails,
+                        null,
+                        userDetails.getAuthorities()
+                    );
+
+                authentication.setDetails(
+                    new WebAuthenticationDetailsSource().buildDetails(request)
                 );
 
-            authentication.setDetails(
-                new WebAuthenticationDetailsSource().buildDetails(request)
-            );
-
-            // 6. SecurityContext 에 인증 정보 저장
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+                // 6. SecurityContext 에 인증 정보 저장
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
+        } catch (Exception e) {
+            // JWT 검증 실패 시 인증 정보를 설정하지 않고 계속 진행
+            // Spring Security 가 인증되지 않은 요청으로 처리 (401/403)
         }
 
         // 7. 다음 필터로 요청 전달
