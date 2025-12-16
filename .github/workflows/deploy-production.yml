@@ -45,27 +45,39 @@ jobs:
 
       - name: Blue-Green Deployment
         uses: appleboy/ssh-action@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          DB_URL: ${{ secrets.PROD_DB_URL }}
+          DB_USER: ${{ secrets.PROD_DB_USERNAME }}
+          DB_PASS: ${{ secrets.PROD_DB_PASSWORD }}
+          JWT_SEC: ${{ secrets.JWT_SECRET }}
+          JWT_ACCESS: ${{ secrets.JWT_ACCESS_EXPIRATION }}
+          JWT_REFRESH: ${{ secrets.JWT_REFRESH_EXPIRATION }}
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
           port: 22
+          envs: GITHUB_TOKEN,GITHUB_ACTOR,REGISTRY,IMAGE_NAME,DB_URL,DB_USER,DB_PASS,JWT_SEC,JWT_ACCESS,JWT_REFRESH
           script: |
             set -e
-            
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
-            # .env 파일 생성 (GitHub Secrets에서 주입)
+
+            echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+
+            # .env 파일 생성 (환경변수에서 주입)
             cat > .env << EOF
-            JDBC_DATABASE_URL=${{ secrets.PROD_DB_URL }}
-            JDBC_DATABASE_USERNAME=${{ secrets.PROD_DB_USERNAME }}
-            JDBC_DATABASE_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            JWT_ACCESS_EXPIRATION=${{ secrets.JWT_ACCESS_EXPIRATION }}
-            JWT_REFRESH_EXPIRATION=${{ secrets.JWT_REFRESH_EXPIRATION }}
+            JDBC_DATABASE_URL=$DB_URL
+            JDBC_DATABASE_USERNAME=$DB_USER
+            JDBC_DATABASE_PASSWORD=$DB_PASS
+            JWT_SECRET=$JWT_SEC
+            JWT_ACCESS_EXPIRATION=$JWT_ACCESS
+            JWT_REFRESH_EXPIRATION=$JWT_REFRESH
             EOF
-            
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+            docker pull $REGISTRY/$IMAGE_NAME:latest
             
             if docker ps --format '{{.Names}}' | grep -q "^board-blue$"; then
               CURRENT="blue"
@@ -97,18 +109,18 @@ jobs:
               --network bridge \
               -p $NEW_PORT:8080 \
               -e SPRING_PROFILES_ACTIVE=prod \
-              -e JDBC_DATABASE_URL=${{ secrets.PROD_DB_URL }} \
-              -e JDBC_DATABASE_USERNAME=${{ secrets.PROD_DB_USERNAME }} \
-              -e JDBC_DATABASE_PASSWORD=${{ secrets.PROD_DB_PASSWORD }} \
-              -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
-              -e JWT_ACCESS_EXPIRATION=${{ secrets.JWT_ACCESS_EXPIRATION }} \
-              -e JWT_REFRESH_EXPIRATION=${{ secrets.JWT_REFRESH_EXPIRATION }} \
+              -e JDBC_DATABASE_URL="$DB_URL" \
+              -e JDBC_DATABASE_USERNAME="$DB_USER" \
+              -e JDBC_DATABASE_PASSWORD="$DB_PASS" \
+              -e JWT_SECRET="$JWT_SEC" \
+              -e JWT_ACCESS_EXPIRATION="$JWT_ACCESS" \
+              -e JWT_REFRESH_EXPIRATION="$JWT_REFRESH" \
               -v /home/ubuntu/board-uploads:/app/uploads \
               --health-cmd="curl -f http://localhost:8080/actuator/health || exit 1" \
               --health-interval=10s \
               --health-timeout=5s \
               --health-retries=3 \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+              $REGISTRY/$IMAGE_NAME:latest
             
             echo "Waiting for new container to be healthy..."
             TIMEOUT=120
