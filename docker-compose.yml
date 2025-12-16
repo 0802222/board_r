@@ -1,11 +1,12 @@
 services:
   mysql:
+    platform: linux/amd64
     image: mysql:8.0
     container_name: board-mysql
     env_file:
       - .env
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     networks:
@@ -20,15 +21,13 @@ services:
       retries: 5
 
   app:
+    platform: linux/amd64
     image: ghcr.io/0802222/board_r/board-staging:latest
     container_name: board-app
     env_file:
       - .env
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION}
-      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION}
     ports:
       - "8080:8080"
     depends_on:
