@@ -61,21 +61,19 @@ jobs:
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
           port: 22
-          script_stop: true
           envs: GITHUB_TOKEN,GITHUB_ACTOR,REGISTRY,IMAGE_NAME,DB_URL,DB_USER,DB_PASS,JWT_SEC,JWT_ACCESS,JWT_REFRESH
           script: |
+            set -e
             cd ~
             echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
 
             # .env 파일 생성 (docker-compose가 읽을 수 있도록)
-            cat > .env << ENVFILE
-            JDBC_DATABASE_URL=$DB_URL
-            JDBC_DATABASE_USERNAME=$DB_USER
-            JDBC_DATABASE_PASSWORD=$DB_PASS
-            JWT_SECRET=$JWT_SEC
-            JWT_ACCESS_EXPIRATION=$JWT_ACCESS
-            JWT_REFRESH_EXPIRATION=$JWT_REFRESH
-            ENVFILE
+            echo "JDBC_DATABASE_URL=$DB_URL" > .env
+            echo "JDBC_DATABASE_USERNAME=$DB_USER" >> .env
+            echo "JDBC_DATABASE_PASSWORD=$DB_PASS" >> .env
+            echo "JWT_SECRET=$JWT_SEC" >> .env
+            echo "JWT_ACCESS_EXPIRATION=$JWT_ACCESS" >> .env
+            echo "JWT_REFRESH_EXPIRATION=$JWT_REFRESH" >> .env
 
             # 디버깅: .env 파일 내용 확인
             echo "=== .env file contents ==="
