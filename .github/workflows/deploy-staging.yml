@@ -55,6 +55,15 @@ jobs:
             cd ~
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
+            # .env 파일 생성 (GitHub Secrets에서 주입)
+            JDBC_DATABASE_URL=${{ secrets.STAGING_DB_URL }}
+            JDBC_DATABASE_USERNAME=${{ secrets.STAGING_DB_USERNAME }}
+            JDBC_DATABASE_PASSWORD=${{ secrets.STAGING_DB_PASSWORD }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            JWT_ACCESS_EXPIRATION=${{ secrets.JWT_ACCESS_EXPIRATION }}
+            JWT_REFRESH_EXPIRATION=${{ secrets.JWT_REFRESH_EXPIRATION }}
+            EOF
+
             # 최신 스테이징 이미지 받아오기
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
