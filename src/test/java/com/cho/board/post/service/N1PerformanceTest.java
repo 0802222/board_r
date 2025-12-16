@@ -1,5 +1,6 @@
 package com.cho.board.post.service;
 
+import com.cho.board.config.TestSecurityConfig;
 import com.cho.board.post.entity.Post;
 import com.cho.board.post.repository.PostRepository;
 import jakarta.persistence.EntityManager;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.ActiveProfiles;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@Import(TestSecurityConfig.class)
 public class N1PerformanceTest {
 
     @Autowired

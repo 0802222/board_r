@@ -3,6 +3,7 @@ package com.cho.board.post.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import com.cho.board.category.entity.Category;
 import com.cho.board.category.entity.CategoryType;
+import com.cho.board.config.TestSecurityConfig;
 import com.cho.board.post.entity.Post;
 import com.cho.board.user.entity.User;
 import com.cho.board.post.repository.PostRepository;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@Import(TestSecurityConfig.class)
 class PostServiceNPlusOneTest {
 
     @Autowired
