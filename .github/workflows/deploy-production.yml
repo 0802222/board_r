@@ -68,14 +68,12 @@ jobs:
             echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
 
             # .env 파일 생성 (환경변수에서 주입)
-            cat > .env << ENVFILE
-            JDBC_DATABASE_URL=$DB_URL
-            JDBC_DATABASE_USERNAME=$DB_USER
-            JDBC_DATABASE_PASSWORD=$DB_PASS
-            JWT_SECRET=$JWT_SEC
-            JWT_ACCESS_EXPIRATION=$JWT_ACCESS
-            JWT_REFRESH_EXPIRATION=$JWT_REFRESH
-            ENVFILE
+            echo "JDBC_DATABASE_URL=$DB_URL" > .env
+            echo "JDBC_DATABASE_USERNAME=$DB_USER" >> .env
+            echo "JDBC_DATABASE_PASSWORD=$DB_PASS" >> .env
+            echo "JWT_SECRET=$JWT_SEC" >> .env
+            echo "JWT_ACCESS_EXPIRATION=$JWT_ACCESS" >> .env
+            echo "JWT_REFRESH_EXPIRATION=$JWT_REFRESH" >> .env
 
             docker pull $REGISTRY/$IMAGE_NAME:latest
             
