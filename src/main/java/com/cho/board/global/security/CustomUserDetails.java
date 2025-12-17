@@ -17,10 +17,8 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // 역할(Role)을 권한(Authority)으로 변환
-        // ROLE_USER, ROLE_ADMIN 형태로
         return Collections.singleton(
-            new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
+            new SimpleGrantedAuthority(user.getRole().getKey())
         );
     }
 

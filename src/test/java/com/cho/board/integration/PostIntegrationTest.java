@@ -86,7 +86,7 @@ class PostIntegrationTest {
 
         // when & then
         mockMvc.perform(post("/posts")
-                .param("userId", testUser.getId().toString())
+                .param("email", testUser.getEmail())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonRequest))
             .andDo(print())
@@ -134,7 +134,7 @@ class PostIntegrationTest {
 
         // when & then
         mockMvc.perform(post("/posts")
-                .param("userId", testUser.getId().toString())
+                .param("email", testUser.getEmail())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonRequest))
             .andDo(print())
@@ -154,7 +154,7 @@ class PostIntegrationTest {
 
         // when & then
         mockMvc.perform(post("/posts")
-                .param("userId", testUser.getId().toString())
+                .param("email", testUser.getEmail())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonRequest))
             .andDo(print())
@@ -234,7 +234,7 @@ class PostIntegrationTest {
 
         // when & then
         mockMvc.perform(put("/posts/{id}", post.getId())
-                .param("userId", testUser.getId().toString())
+                .param("email", testUser.getEmail())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonRequest))
             .andDo(print())
@@ -300,7 +300,7 @@ class PostIntegrationTest {
 
         // when & then
         mockMvc.perform(put("/posts/{id}", post.getId())
-                .param("userId", testUser.getId().toString())
+                .param("email", testUser.getEmail())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonRequest))
             .andDo(print())
@@ -320,7 +320,7 @@ class PostIntegrationTest {
 
         // when & then
         mockMvc.perform(delete("/posts/{id}", post.getId())
-                .param("userId", testUser.getId().toString()))
+                .param("email", testUser.getEmail()))
             .andDo(print())
             .andExpect(status().isNoContent());
 
@@ -375,7 +375,7 @@ class PostIntegrationTest {
 
         // when & then
         mockMvc.perform(put("/posts/{id}", post.getId())
-                .param("userId", testUser.getId().toString())
+                .param("email", testUser.getEmail())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonRequest))
             .andDo(print())
@@ -395,7 +395,7 @@ class PostIntegrationTest {
 
         // when & then
         mockMvc.perform(put("/posts/{id}", post.getId())
-                .param("userId", testUser.getId().toString())
+                .param("email", testUser.getEmail())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonRequest))
             .andDo(print())
