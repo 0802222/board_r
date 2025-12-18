@@ -33,6 +33,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -74,6 +75,7 @@ class PostIntegrationTest {
 
     @Test
     @DisplayName("게시글 작성 통합 테스트")
+    @WithMockUser(username = "test@example.com")
     void createPost_Integration() throws Exception {
         // given
         String jsonRequest = String.format("""
@@ -86,7 +88,6 @@ class PostIntegrationTest {
 
         // when & then
         mockMvc.perform(post("/posts")
-                .param("userId", testUser.getId().toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonRequest))
             .andDo(print())
@@ -217,6 +218,7 @@ class PostIntegrationTest {
 
     @Test
     @DisplayName("게시글 수정 통합 테스트")
+    @WithMockUser(username = "test@example.com")
     void updatePost_Integration() throws Exception {
         // given
         Post post = postRepository.save(
@@ -234,7 +236,6 @@ class PostIntegrationTest {
 
         // when & then
         mockMvc.perform(put("/posts/{id}", post.getId())
-                .param("userId", testUser.getId().toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonRequest))
             .andDo(print())
@@ -286,6 +287,7 @@ class PostIntegrationTest {
 
     @Test
     @DisplayName("게시글 부분 수정 - 제목만 수정")
+    @WithMockUser(username = "test@example.com")
     void updatePost_PartialUpdate() throws Exception {
         // given
         Post post = postRepository.save(
@@ -300,7 +302,6 @@ class PostIntegrationTest {
 
         // when & then
         mockMvc.perform(put("/posts/{id}", post.getId())
-                .param("userId", testUser.getId().toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonRequest))
             .andDo(print())
@@ -312,6 +313,7 @@ class PostIntegrationTest {
 
     @Test
     @DisplayName("게시글 삭제 통합 테스트")
+    @WithMockUser(username = "test@example.com")
     void deletePost_Integration() throws Exception {
         // given
         Post post = postRepository.save(
@@ -319,8 +321,7 @@ class PostIntegrationTest {
         );
 
         // when & then
-        mockMvc.perform(delete("/posts/{id}", post.getId())
-                .param("userId", testUser.getId().toString()))
+        mockMvc.perform(delete("/posts/{id}", post.getId()))
             .andDo(print())
             .andExpect(status().isNoContent());
 

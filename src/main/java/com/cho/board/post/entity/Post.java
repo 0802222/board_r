@@ -1,8 +1,8 @@
 package com.cho.board.post.entity;
 
-import com.cho.board.global.common.entity.BaseEntity;
 import com.cho.board.category.entity.Category;
 import com.cho.board.comment.entity.Comment;
+import com.cho.board.global.common.entity.BaseEntity;
 import com.cho.board.user.entity.User;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -24,7 +24,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.web.bind.annotation.BindParam;
 
 @Entity
 @Table(
@@ -91,8 +90,8 @@ public class Post extends BaseEntity {
         this.viewCount++;
     }
 
-    public boolean isAuthor(Long userId) {
-        return this.author.getId().equals(userId);
+    public boolean isAuthor(String email) {
+        return this.author.getEmail().equals(email);
     }
 
     // PostImage 관련 필드

@@ -1,5 +1,7 @@
 package com.cho.board.config;
 
+import com.cho.board.global.util.JwtUtil;
+import org.mockito.Mockito;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -8,6 +10,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -22,9 +25,7 @@ public class TestSecurityConfig {
     public SecurityFilterChain testFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(auth -> auth
-                .anyRequest().permitAll()  // 테스트 환경에서는 모든 요청 허용
-            );
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         return http.build();
     }
 
@@ -37,5 +38,17 @@ public class TestSecurityConfig {
     public AuthenticationManager authenticationManager(
         AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
+    }
+
+    @Bean
+    @Primary
+    public JwtUtil jwtUtil() {
+        return Mockito.mock(JwtUtil.class);
+    }
+
+    @Bean
+    @Primary
+    public UserDetailsService userDetailsService() {
+        return Mockito.mock(UserDetailsService.class);
     }
 }
