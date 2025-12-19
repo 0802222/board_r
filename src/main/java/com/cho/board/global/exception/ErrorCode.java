@@ -12,6 +12,7 @@ public enum ErrorCode {
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "4000", "잘못된 입력값입니다"),
     INVALID_TYPE_VALUE(HttpStatus.BAD_REQUEST, "4000", "잘못된 타입입니다"),
     INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "4000", "비밀번호 형식이 올바르지 않습니다"),
+    INCORRECT_PASSWORD(HttpStatus.BAD_REQUEST, "4000", "현재 비밀번호가 일치하지 않습니다"),
     SAME_PASSWORD(HttpStatus.BAD_REQUEST, "4000", "새 비밀번호는 기존과 달라야 합니다"),
     DELETED_COMMENT(HttpStatus.BAD_REQUEST, "4000", "삭제된 댓글은 수정할 수 없습니다"),
 

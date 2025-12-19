@@ -113,4 +113,44 @@ public class UserService {
             );
         userRepository.delete(user);
     }
+
+    // Email 기반 메서드들 (JWT 인증용)
+    @Transactional(readOnly = true)
+    public User findByEmail(String email) {
+        return userRepository.findByEmail(email)
+            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND,
+                "사용자를 찾을 수 없습니다. Email: " + email));
+    }
+
+    public User updateByEmail(String email, UserUpdateRequest request) {
+        User user = findByEmail(email);
+        return update(user.getId(), request);
+    }
+
+    public User updateProfileImageByEmail(String email, MultipartFile file) {
+        User user = findByEmail(email);
+        return updateProfileImage(user.getId(), file);
+    }
+
+    public void changePassword(String email, String currentPassword, String newPassword) {
+        User user = findByEmail(email);
+
+        // 현재 비밀번호 확인
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new BusinessException(ErrorCode.INCORRECT_PASSWORD);
+        }
+
+        // 새 비밀번호가 현재 비밀번호와 같은지 확인
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            throw new BusinessException(ErrorCode.SAME_PASSWORD);
+        }
+
+        String encodedPassword = passwordEncoder.encode(newPassword);
+        user.changePassword(encodedPassword);
+    }
+
+    public void deleteByEmail(String email) {
+        User user = findByEmail(email);
+        userRepository.delete(user);
+    }
 }

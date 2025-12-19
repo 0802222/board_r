@@ -48,9 +48,7 @@ public class SecurityConfig {
                     "/swagger-ui.html",
                     "/actuator/health",
                     "/users",
-                    "/auth/signup",
-                    "/auth/login",
-                    "/auth/refresh"
+                    "/auth/**"
                 ).permitAll()
                 // 나머지는 인증 필요
                 .anyRequest().authenticated()
