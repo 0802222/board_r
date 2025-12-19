@@ -56,12 +56,14 @@ jobs:
           JWT_SEC: ${{ secrets.JWT_SECRET }}
           JWT_ACCESS: ${{ secrets.JWT_ACCESS_EXPIRATION }}
           JWT_REFRESH: ${{ secrets.JWT_REFRESH_EXPIRATION }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
           port: 22
-          envs: GITHUB_TOKEN,GITHUB_ACTOR,REGISTRY,IMAGE_NAME,DB_URL,DB_USER,DB_PASS,JWT_SEC,JWT_ACCESS,JWT_REFRESH
+          envs: GITHUB_TOKEN,GITHUB_ACTOR,REGISTRY,IMAGE_NAME,DB_URL,DB_USER,DB_PASS,JWT_SEC,JWT_ACCESS,JWT_REFRESH,MAIL_USERNAME,MAIL_PASSWORD
           script: |
             set -e
 
@@ -74,6 +76,8 @@ jobs:
             echo "JWT_SECRET=$JWT_SEC" >> .env
             echo "JWT_ACCESS_EXPIRATION=$JWT_ACCESS" >> .env
             echo "JWT_REFRESH_EXPIRATION=$JWT_REFRESH" >> .env
+            echo "MAIL_USERNAME=$MAIL_USERNAME" >> .env
+            echo "MAIL_PASSWORD=$MAIL_PASSWORD" >> .env
 
             docker pull $REGISTRY/$IMAGE_NAME:latest
             
@@ -113,6 +117,8 @@ jobs:
               -e JWT_SECRET="$JWT_SEC" \
               -e JWT_ACCESS_EXPIRATION="$JWT_ACCESS" \
               -e JWT_REFRESH_EXPIRATION="$JWT_REFRESH" \
+              -e MAIL_USERNAME="$MAIL_USERNAME" \
+              -e MAIL_PASSWORD="$MAIL_PASSWORD" \
               -v /home/ubuntu/board-uploads:/app/uploads \
               --health-cmd="curl -f http://localhost:8080/actuator/health || exit 1" \
               --health-interval=10s \
