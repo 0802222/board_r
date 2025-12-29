@@ -8,12 +8,14 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.data.web.config.EnableSpringDataWebSupport;
 import org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerializationMode;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableJpaAuditing
 @EntityScan("com.cho.board")
 @EnableJpaRepositories("com.cho.board")
 @EnableSpringDataWebSupport(pageSerializationMode = PageSerializationMode.VIA_DTO)
+@EnableScheduling
 public class BoardApplication {
 
     public static void main(String[] args) {
@@ -51,7 +53,7 @@ public class BoardApplication {
                 System.setProperty("JWT_REFRESH_EXPIRATION", dotenv.get("JWT_REFRESH_EXPIRATION"));
             }
         } catch (Exception e) {
-
+            System.out.println("Using default configuration (no .env file)");
         }
         SpringApplication.run(BoardApplication.class, args);
     }

@@ -14,14 +14,14 @@ POST http://localhost:8080/auth/login
 Content-Type: application/json
 
 {
-  "email": "0802222@naver.com",
-  "password": "test1234@"
+  "email": "test-1-0-1767017720218@test.com",
+  "password": "Test1234!@"
 }
 
 
 ### 3. 인증코드 전송
-POST http://localhost:8080/auth/email/send-verification?email=0802222@naver.com
+POST http://localhost:8080/auth/email/send-verification?email=test-3-0-1767017720218@test.com
 
 
 ### 4. 이메일 확인 후 코드 검증 (예: 123456)
-POST http://localhost:8080/auth/email/verify?email=0802222@naver.com&code=632704
+POST http://localhost:8080/auth/email/verify?email=0802222@naver.com&code=808268
