@@ -2,7 +2,6 @@ package com.cho.board.auth.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
 import static org.mockito.BDDMockito.willThrow;
@@ -20,6 +19,7 @@ import com.cho.board.email.service.EmailService;
 import com.cho.board.global.exception.CustomJwtException;
 import com.cho.board.global.exception.DuplicateResourceException;
 import com.cho.board.global.exception.ErrorCode;
+import com.cho.board.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,6 +48,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private EmailService emailService;
+
+    @MockitoBean
+    private UserRepository userRepository;
 
     @Autowired
     private MockMvc mockMvc;
@@ -291,13 +294,46 @@ class AuthControllerTest {
     @DisplayName("이메일 인증 코드 전송 성공")
     void sendVerificationEmail_Success() throws Exception {
         // given
-        willDoNothing().given(emailService).sendVerificationEmail(anyString());
+        given(userRepository.existsByEmail(anyString())).willReturn(false);
+        willDoNothing().given(emailService)
+            .validateAndPrepareVerification(anyString());
 
         // when & then
         mockMvc.perform(post("/auth/email/send-verification")
                 .param("email", "test@test.com"))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.message").value("인증코드가 전송되었습니다."));
+    }
+
+    @Test
+    @DisplayName("이메일 인증 코드 전송 실패 - 이미 가입된 이메일")
+    void sendVerificationEmail_Fail_AlreadyExists() throws Exception {
+        // given
+        given(userRepository.existsByEmail("test@test.com")).willReturn(true);
+
+        // when & then
+        mockMvc.perform(post("/auth/email/send-verification")
+                .param("email", "test@test.com"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("이미 가입된 이메일입니다."));
+    }
+
+    @Test
+    @DisplayName("이메일 인증 코드 전송 실패 - 5분 제한")
+    void sendVerificationEmail_Fail_RateLimit() throws Exception {
+        // given
+        given(userRepository.existsByEmail(anyString())).willReturn(false);
+        willThrow(new IllegalStateException("인증코드를 295초 후에 재발송할 수 있습니다."))
+            .given(emailService).validateAndPrepareVerification(anyString());
+
+        // when & then
+        mockMvc.perform(post("/auth/email/send-verification")
+                .param("email", "test@test.com"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("인증코드를 295초 후에 재발송할 수 있습니다."));
     }
 
     @Test
