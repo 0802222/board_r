@@ -68,17 +68,17 @@ jobs:
             set -e
 
             echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
-
+            
             # .env 파일 생성 (환경변수에서 주입)
-            echo "JDBC_DATABASE_URL=$DB_URL" > .env
-            echo "JDBC_DATABASE_USERNAME=$DB_USER" >> .env
-            echo "JDBC_DATABASE_PASSWORD=$DB_PASS" >> .env
-            echo "JWT_SECRET=$JWT_SEC" >> .env
-            echo "JWT_ACCESS_EXPIRATION=$JWT_ACCESS" >> .env
-            echo "JWT_REFRESH_EXPIRATION=$JWT_REFRESH" >> .env
-            echo "MAIL_USERNAME=$MAIL_USERNAME" >> .env
-            echo "MAIL_PASSWORD=$MAIL_PASSWORD" >> .env
-
+            echo "JDBC_DATABASE_URL=$DB_URL" > /home/ubuntu/.env
+            echo "JDBC_DATABASE_USERNAME=$DB_USER" >> /home/ubuntu/.env
+            echo "JDBC_DATABASE_PASSWORD=$DB_PASS" >> /home/ubuntu/.env
+            echo "JWT_SECRET=$JWT_SEC" >> /home/ubuntu/.env
+            echo "JWT_ACCESS_EXPIRATION=$JWT_ACCESS" >> /home/ubuntu/.env
+            echo "JWT_REFRESH_EXPIRATION=$JWT_REFRESH" >> /home/ubuntu/.env
+            echo "MAIL_USERNAME=$MAIL_USERNAME" >> /home/ubuntu/.env
+            echo "MAIL_PASSWORD=$MAIL_PASSWORD" >> /home/ubuntu/.env
+  
             docker pull $REGISTRY/$IMAGE_NAME:latest
             
             if docker ps --format '{{.Names}}' | grep -q "^board-blue$"; then
@@ -108,24 +108,18 @@ jobs:
             docker run -d \
               --name board-$NEW \
               --restart unless-stopped \
-              --network bridge \
+              --network ubuntu_board-network \
               -p $NEW_PORT:8080 \
               -e SPRING_PROFILES_ACTIVE=prod \
-              -e JDBC_DATABASE_URL="$DB_URL" \
-              -e JDBC_DATABASE_USERNAME="$DB_USER" \
-              -e JDBC_DATABASE_PASSWORD="$DB_PASS" \
-              -e JWT_SECRET="$JWT_SEC" \
-              -e JWT_ACCESS_EXPIRATION="$JWT_ACCESS" \
-              -e JWT_REFRESH_EXPIRATION="$JWT_REFRESH" \
-              -e MAIL_USERNAME="$MAIL_USERNAME" \
-              -e MAIL_PASSWORD="$MAIL_PASSWORD" \
+              --env-file /home/ubuntu/.env \
               -v /home/ubuntu/board-uploads:/app/uploads \
               --health-cmd="curl -f http://localhost:8080/actuator/health || exit 1" \
               --health-interval=10s \
               --health-timeout=5s \
               --health-retries=3 \
               $REGISTRY/$IMAGE_NAME:latest
-            
+  
+  
             echo "Waiting for new container to be healthy..."
             TIMEOUT=120
             ELAPSED=0
