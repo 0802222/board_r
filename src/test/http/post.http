@@ -1,0 +1,20 @@
+### 1. 최신순 정렬 (기본)
+GET http://localhost:8080/posts?page=0&size=10&sort=createdAt,desc
+
+### 2. 조회수순 정렬
+GET http://localhost:8080/posts?page=0&size=10&sort=viewCount,desc
+
+### 3. 카테고리 필터링 (categoryId=1)
+GET http://localhost:8080/posts?categoryId=1&page=0&size=10
+
+### 4. 검색어 + 카테고리 + 정렬 복합
+GET http://localhost:8080/posts?keyword=스프링&categoryId=1&sort=viewCount,desc
+
+### 5. 제목순 정렬 (오름차순)
+GET http://localhost:8080/posts?sort=title,asc
+
+### 6. 게시글 상세 조회 (조회수 증가 확인)
+GET http://localhost:8080/posts/2
+
+### 7. 같은 게시글 다시 조회 (조회수 증가했는지 확인)
+GET http://localhost:8080/posts/2

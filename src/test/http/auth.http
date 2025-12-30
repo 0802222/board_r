@@ -1,0 +1,74 @@
+### auth.http
+
+### 1. 회원가입 (기존 user가 있으면 스킵)
+POST http://localhost:8080/users
+Content-Type: application/json
+
+{
+  "name": "테스트",
+  "nickname": "테스터",
+  "email": "test@example.com",
+  "password": "Test1234!@"
+}
+
+### 2. 로그인 성공
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "Test1234!@"
+}
+
+### 3. 로그인 실패 - 잘못된 비밀번호
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "WrongPassword123!"
+}
+
+### 4. 로그인 실패 - 존재하지 않는 이메일
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "notexist@example.com",
+  "password": "Test1234!@"
+}
+
+### 5. Validation 실패 - 이메일 형식 오류
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "invalid-email",
+  "password": "Test1234!@"
+}
+
+
+
+###
+### 1. 로그인
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "Test1234!@"
+}
+
+
+### 2. 인증이 필요한 API 호출
+GET http://localhost:8080/posts
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIiwiaWF0IjoxNzY1ODI1MDExLCJleHAiOjE3NjU4Mjg2MTF9.SCYBdNro4I1UJ3OkXZmfa3BwSNg_cvT5Szgb-9qjWcc
+
+
+### 3. 토큰 갱신 (AccessToken 만료 시)
+POST http://localhost:8080/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIiwiaWF0IjoxNzY1ODE1NDUzLCJleHAiOjE3NjY0MjAyNTN9.tRMxbGJiZtrf0VOfbgo05kyJBmRDK6Ln7bbMGhObhkA"
+}

@@ -45,25 +45,69 @@ jobs:
 
       - name: Deploy to Staging Server (docker-compose)
         uses: appleboy/ssh-action@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          DB_URL: ${{ secrets.STAGING_DB_URL }}
+          DB_USER: ${{ secrets.STAGING_DB_USERNAME }}
+          DB_PASS: ${{ secrets.STAGING_DB_PASSWORD }}
+          JWT_SEC: ${{ secrets.JWT_SECRET }}
+          JWT_ACCESS: ${{ secrets.JWT_ACCESS_EXPIRATION }}
+          JWT_REFRESH: ${{ secrets.JWT_REFRESH_EXPIRATION }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
           port: 22
-          script_stop: true
+          envs: GITHUB_TOKEN,GITHUB_ACTOR,REGISTRY,IMAGE_NAME,DB_URL,DB_USER,DB_PASS,JWT_SEC,JWT_ACCESS,JWT_REFRESH,MAIL_USERNAME,MAIL_PASSWORD
           script: |
+            set -e
             cd ~
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+
+            # .env 파일 생성 (docker-compose가 읽을 수 있도록)
+            echo "JDBC_DATABASE_URL=$DB_URL" > .env
+            echo "JDBC_DATABASE_USERNAME=$DB_USER" >> .env
+            echo "JDBC_DATABASE_PASSWORD=$DB_PASS" >> .env
+            echo "JWT_SECRET=$JWT_SEC" >> .env
+            echo "JWT_ACCESS_EXPIRATION=$JWT_ACCESS" >> .env
+            echo "JWT_REFRESH_EXPIRATION=$JWT_REFRESH" >> .env
+            echo "MAIL_USERNAME=$MAIL_USERNAME" >> .env
+            echo "MAIL_PASSWORD=$MAIL_PASSWORD" >> .env
+
+
+            # 디버깅: .env 파일 내용 확인
+            echo "=== .env file contents ==="
+            cat .env
+            echo "=========================="
 
             # 최신 스테이징 이미지 받아오기
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            docker pull $REGISTRY/$IMAGE_NAME:latest
 
-            # docker-compose 로 재배포
+            # docker-compose 로 재배포 (.env 파일 사용)
             docker-compose down
             docker-compose up -d
 
             # 헬스 체크 (compose 에서 8080을 쓴다고 가정)
-            sleep 30
-            curl -f http://localhost:8080/actuator/health || exit 1
+            echo "Waiting for app to be healthy..."
+            for i in {1..12}; do
+              if curl -f http://localhost:8080/actuator/health; then
+                echo "✅ Staging app is healthy!"
+                break
+              fi
+
+              if [ $i -eq 12 ]; then
+                echo "❌ Health check failed on staging"
+                docker-compose logs --tail=50
+                exit 1
+              fi
+
+              echo "Retry $i/12..."
+              sleep 5
+            done
 
             docker image prune -af

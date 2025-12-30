@@ -1,20 +1,13 @@
 package com.cho.board.post.dtos;
 
 import com.cho.board.post.entity.Post;
-import java.time.LocalDateTime;
-import lombok.Builder;
 import lombok.Getter;
+import lombok.experimental.SuperBuilder;
 
 @Getter
-@Builder
-public class PostListResponse {
+@SuperBuilder
+public class PostListResponse extends PostBaseResponse {
 
-    private Long id;
-    private String title;
-    private int viewCount;
-    private String authorName;
-    private String categoryType;
-    private LocalDateTime createdAt;
     private String thumbnailPath;
     private Integer imageCount;
 
@@ -27,10 +20,12 @@ public class PostListResponse {
         return PostListResponse.builder()
             .id(post.getId())
             .title(post.getTitle())
-            .viewCount(post.getViewCount())
             .authorName(post.getAuthor().getName())
-            .categoryType(post.getCategory().getCategoryType().getDescription())
+            .categoryType(post.getCategory().getCategoryType())
             .createdAt(post.getCreatedAt())
+            .viewCount(post.getViewCount())
+
+            // 자식 클래스 필드
             .thumbnailPath(thumbnail)
             .imageCount(post.getImages().size())
             .build();

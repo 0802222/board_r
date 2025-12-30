@@ -2,10 +2,11 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.5.5'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'jacoco'
 }
 
 group = 'com.cho'
-version = '0.0.1-SNAPSHOT'
+version = '1.0.0'   // 0.0.1-SNAPSHOT
 description = 'Board'
 
 java {
@@ -62,8 +63,54 @@ dependencies {
     annotationProcessor "com.querydsl:querydsl-apt:5.0.0:jakarta"
     annotationProcessor "jakarta.annotation:jakarta.annotation-api"
     annotationProcessor "jakarta.persistence:jakarta.persistence-api"
+
+    // jwt
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.3'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
+
+    // email
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
 }
 
+
+// Java Code Coverage (테스트 커버리지 측정)
+jacoco {
+    toolVersion = "0.8.11"
+}
+
+// 테스트 후 자동으로 리포트 생성
 tasks.named('test') {
     useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+// JaCoCo 리포트 설정
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true   // Codecov 용
+        html.required = true  // local 확인용
+        html.outputLocation = layout.buildDirectory.dir('reports/jacoco/test')
+    }
+}
+
+// 커버리지 검증
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            // 제외할 클래스들
+            excludes = [
+                    '**.dto.**',
+                    '**.entity.**',
+                    '**.config.**',
+                    '**.BoardApplication',
+                    '**.exception.**'
+            ]
+
+            limit {
+                minimum = 0.30 // 추후 0.60 수준으로 변경 예정
+            }
+        }
+    }
 }

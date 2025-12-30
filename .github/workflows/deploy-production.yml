@@ -45,70 +45,164 @@ jobs:
 
       - name: Blue-Green Deployment
         uses: appleboy/ssh-action@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          DB_URL: ${{ secrets.PROD_DB_URL }}
+          DB_USER: ${{ secrets.PROD_DB_USERNAME }}
+          DB_PASS: ${{ secrets.PROD_DB_PASSWORD }}
+          JWT_SEC: ${{ secrets.JWT_SECRET }}
+          JWT_ACCESS: ${{ secrets.JWT_ACCESS_EXPIRATION }}
+          JWT_REFRESH: ${{ secrets.JWT_REFRESH_EXPIRATION }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
           port: 22
+          envs: GITHUB_TOKEN,GITHUB_ACTOR,REGISTRY,IMAGE_NAME,DB_URL,DB_USER,DB_PASS,JWT_SEC,JWT_ACCESS,JWT_REFRESH,MAIL_USERNAME,MAIL_PASSWORD
           script: |
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            set -e
+
+            echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+
+            # .env 파일 생성 (환경변수에서 주입)
+            echo "JDBC_DATABASE_URL=$DB_URL" > .env
+            echo "JDBC_DATABASE_USERNAME=$DB_USER" >> .env
+            echo "JDBC_DATABASE_PASSWORD=$DB_PASS" >> .env
+            echo "JWT_SECRET=$JWT_SEC" >> .env
+            echo "JWT_ACCESS_EXPIRATION=$JWT_ACCESS" >> .env
+            echo "JWT_REFRESH_EXPIRATION=$JWT_REFRESH" >> .env
+            echo "MAIL_USERNAME=$MAIL_USERNAME" >> .env
+            echo "MAIL_PASSWORD=$MAIL_PASSWORD" >> .env
+
+            docker pull $REGISTRY/$IMAGE_NAME:latest
             
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            
-            if docker ps | grep -q board-blue; then
+            if docker ps --format '{{.Names}}' | grep -q "^board-blue$"; then
               CURRENT="blue"
               CURRENT_PORT=8080
               NEW="green"
               NEW_PORT=8081
-            else
+            elif docker ps --format '{{.Names}}' | grep -q "^board-green$"; then
               CURRENT="green"
               CURRENT_PORT=8081
               NEW="blue"
               NEW_PORT=8080
+            else
+              CURRENT=""
+              CURRENT_PORT=""
+              NEW="blue"
+              NEW_PORT=8080
+              echo "Initial deployment - starting with Blue"
             fi
             
-            echo "Current: $CURRENT (port $CURRENT_PORT)"
+            echo "Current: ${CURRENT:-none} (port ${CURRENT_PORT:-none})"
             echo "Deploying to: $NEW (port $NEW_PORT)"
             
-            docker stop board-$NEW || true
-            docker rm board-$NEW || true
+            docker stop board-$NEW 2>/dev/null || true
+            docker rm -f board-$NEW 2>/dev/null || true
             
             docker run -d \
               --name board-$NEW \
               --restart unless-stopped \
+              --network bridge \
               -p $NEW_PORT:8080 \
               -e SPRING_PROFILES_ACTIVE=prod \
-              -e JDBC_DATABASE_URL=${{ secrets.PROD_DB_URL }} \
-              -e JDBC_DATABASE_USERNAME=${{ secrets.PROD_DB_USERNAME }} \
-              -e JDBC_DATABASE_PASSWORD=${{ secrets.PROD_DB_PASSWORD }} \
+              -e JDBC_DATABASE_URL="$DB_URL" \
+              -e JDBC_DATABASE_USERNAME="$DB_USER" \
+              -e JDBC_DATABASE_PASSWORD="$DB_PASS" \
+              -e JWT_SECRET="$JWT_SEC" \
+              -e JWT_ACCESS_EXPIRATION="$JWT_ACCESS" \
+              -e JWT_REFRESH_EXPIRATION="$JWT_REFRESH" \
+              -e MAIL_USERNAME="$MAIL_USERNAME" \
+              -e MAIL_PASSWORD="$MAIL_PASSWORD" \
               -v /home/ubuntu/board-uploads:/app/uploads \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+              --health-cmd="curl -f http://localhost:8080/actuator/health || exit 1" \
+              --health-interval=10s \
+              --health-timeout=5s \
+              --health-retries=3 \
+              $REGISTRY/$IMAGE_NAME:latest
             
             echo "Waiting for new container to be healthy..."
-            for i in {1..12}; do
-              if curl -f http://localhost:$NEW_PORT/actuator/health; then
+            TIMEOUT=120
+            ELAPSED=0
+            
+            while [ $ELAPSED -lt $TIMEOUT ]; do
+              if docker inspect --format='{{.State.Health.Status}}' board-$NEW 2>/dev/null | grep -q "healthy"; then
                 echo "✅ New container is healthy!"
-                break
+                break;
               fi
-              if [ $i -eq 12 ]; then
-                echo "❌ Health check failed"
-                docker logs board-$NEW
-                exit 1
-              fi
-              echo "Retry $i/12..."
+              
+              echo "Waiting... $((ELAPSED/5))/24 attempts"
               sleep 5
+              ELAPSED=$((ELAPSED + 5))
             done
             
-            sudo bash /home/ubuntu/scripts/switch-nginx.sh $NEW_PORT
+            if [ $ELAPSED -ge $TIMEOUT ]; then
+                echo "❌ Health check timeout after ${TIMEOUT}s"
+                docker logs --tail 50 board-$NEW
+                docker stop board-$NEW
+                docker rm board-$NEW
+                exit 1
+              fi
             
-            sudo nginx -t && sudo systemctl reload nginx
+            if ! sudo bash /home/ubuntu/scripts/switch-nginx.sh $NEW_PORT; then
+              echo  "❌ Nginx switch failed"
+              docker stop board-$NEW
+              docker rm board-$NEW
+              exit 1
+            fi
             
+            if ! sudo nginx -t; then
+              echo "❌ Nginx config test failed - Rolling back"
+              sudo cp /etc/nginx/sites-available/default.backup \
+                      /etc/nginx/sites-available/default
+              docker stop board-$NEW
+              docker rm board-$NEW
+              exit 1
+            fi
+            
+            sudo systemctl reload nginx
             echo "✅ Traffic switched to $NEW (port $NEW_PORT)"
             
+            echo "Verifying post-deployment health..."
+            for i in {1..5}; do
+              if ! curl -f http://localhost:$NEW_PORT/actuator/health >/dev/null 2>&1; then
+                echo "❌ Post-deployment check failed (attempt $i/5)"
+                
+                if [ -n "$CURRENT" ]; then
+                sudo bash /home/ubuntu/scripts/switch-nginx.sh $CURRENT_PORT
+                sudo systemctl reload nginx
+                fi
+                
+                docker stop board-$NEW
+                docker rm board-$NEW
+                
+                if [ -n "$CURRENT" ]; then
+                  echo "✅ Rolled back to $CURRENT (port $CURRENT_PORT)"
+                  else
+                  echo "✅ Deployment cancelled (no rollback target)"
+                fi
+                exit 1
+              fi
+              echo "✓ Health check $i/5 passed"
+              sleep 6
+            done
+              
+            echo "✅ Post-deployment verification completed"
+            
             sleep 30
-            docker stop board-$CURRENT || true
-            docker rm board-$CURRENT || true
+            
+            if [ -n "$CURRENT" ]; then
+              echo "Stopping old container: $CURRENT"
+              docker stop board-$CURRENT 2>/dev/null || true
+              docker rm board-$CURRENT 2>/dev/null || true
+            fi
             
             docker image prune -af
             
             echo "🎉 Blue-Green deployment completed successfully!"
+            echo "Active: $NEW (port $NEW_PORT)"

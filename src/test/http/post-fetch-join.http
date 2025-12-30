@@ -1,0 +1,7 @@
+### Fetch Join - 게시글 목록 조회
+GET http://localhost:8080/posts/fetch-join
+Accept: application/json
+
+### Fetch Join - 게시글 상세 조회
+GET http://localhost:8080/posts/2/fetch-join
+Accept: application/json

@@ -9,4 +9,9 @@ public interface PostRepositoryCustom {
 
     Page<Post> searchPosts(PostSearchCondition condition, Pageable pageable);
 
+    Page<Post> searchPostsWithFilters(
+        String keyword,
+        Long categoryId,
+        Pageable pageable
+    );
 }
