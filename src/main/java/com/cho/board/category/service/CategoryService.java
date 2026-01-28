@@ -1,12 +1,15 @@
 package com.cho.board.category.service;
 
+import com.cho.board.category.dtos.CategoryRequest;
+import com.cho.board.category.dtos.CategoryResponse;
 import com.cho.board.category.entity.Category;
-import com.cho.board.category.entity.CategoryType;
+import com.cho.board.category.repository.CategoryRepository;
 import com.cho.board.global.exception.ErrorCode;
 import com.cho.board.global.exception.ResourceNotFoundException;
-import com.cho.board.category.repository.CategoryRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,23 +20,32 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
 
-    public Category create(CategoryType categoryType, String description) {
+    @CacheEvict(value = "categories", allEntries = true)
+    public CategoryResponse create(CategoryRequest request) {
+
         Category category = Category.builder()
-            .categoryType(categoryType)
-            .description(description)
+            .categoryType(request.getCategoryType())
+            .description(request.getDescription())
             .isActive(true)
             .build();
-        return categoryRepository.save(category);
+
+        Category savedCategory = categoryRepository.save(category);
+        return CategoryResponse.from(savedCategory);
     }
 
     @Transactional(readOnly = true)
-    public List<Category> findAll() {
-        return categoryRepository.findAll();
+    @Cacheable("categories")
+    public List<CategoryResponse> getAllCategories() {
+        // 캐시 미스 시에만 DB 조회
+        return categoryRepository.findAll().stream()
+            .map(CategoryResponse::from)
+            .toList();
     }
 
     @Transactional(readOnly = true)
-    public Category findById(Long id) {
-        return categoryRepository.findById(id)
+    public Category getCategory(Long categoryId) {
+
+        return categoryRepository.findById(categoryId)
             .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.CATEGORY_NOT_FOUND));
     }
 }

@@ -1,5 +1,6 @@
 package com.cho.board;
 
+import com.cho.board.category.dtos.CategoryRequest;
 import com.cho.board.category.entity.CategoryType;
 import com.cho.board.category.service.CategoryService;
 import lombok.RequiredArgsConstructor;
@@ -17,11 +18,34 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        if (categoryService.findAll().isEmpty()) {
-            categoryService.create(CategoryType.NOTICE, "공지사항");
-            categoryService.create(CategoryType.FREE, "자유게시판");
-            categoryService.create(CategoryType.QNA, "질문");
-            categoryService.create(CategoryType.TECH, "기술");
+        if (categoryService.getAllCategories().isEmpty()) {
+            categoryService.create(
+                CategoryRequest.builder()
+                    .categoryType(CategoryType.NOTICE)
+                    .description("공지사항")
+                    .build()
+            );
+
+            categoryService.create(
+                CategoryRequest.builder()
+                    .categoryType(CategoryType.FREE)
+                    .description("자유게시판")
+                    .build()
+            );
+
+            categoryService.create(
+                CategoryRequest.builder()
+                    .categoryType(CategoryType.QNA)
+                    .description("질문")
+                    .build()
+            );
+
+            categoryService.create(
+                CategoryRequest.builder()
+                    .categoryType(CategoryType.TECH)
+                    .description("기술")
+                    .build()
+            );
         }
     }
 }
