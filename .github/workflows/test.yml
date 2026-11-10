@@ -4,7 +4,8 @@ on:
   pull_request:
     branches: [ main, develop ]
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
+  workflow_call:   # deploy-staging.yml 에서 배포 전 게이트로 재사용
 
 jobs:
   test:
@@ -62,6 +63,6 @@ jobs:
           min-coverage-overall: 60
           min-coverage-changed-files: 70
 
-      # 커버리지 검증 (60% 이상)
-#      - name: Verify coverage
-#        run: ./gradlew jacocoTestCoverageVerification
+      # 커버리지 검증 (build.gradle 의 jacocoTestCoverageVerification 임계값 미만이면 실패)
+      - name: Verify coverage
+        run: ./gradlew jacocoTestCoverageVerification
