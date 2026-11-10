@@ -198,18 +198,23 @@ src/test/java/
 
 ### CI 파이프라인
 
-PR 생성 시 자동 실행:
-- 테스트 실행 + JaCoCo 커버리지 측정
-- Codecov 리포트 업로드
-- PR 코멘트로 커버리지 변화 표시
+- PR(main, develop) 및 push(main, develop) 시 테스트 + JaCoCo 리포트 + 커버리지 검증(`jacocoTestCoverageVerification`) 실행
+- Codecov 리포트 업로드, PR 코멘트로 커버리지 표시
+- develop push 시 스테이징 배포는 테스트 통과 후에만 진행
 
 ---
 
 ## 성능 테스트 (K6)
 
-100명 동시 접속 환경에서 부하 테스트 수행
+### 테스트 환경과 한계
 
-### 테스트 결과
+- 환경: 로컬 개발 환경 (MacBook Air 15, Apple M2), local 프로필, MySQL 8.0, Java 21
+- 도구: Grafana Cloud K6 무료 플랜 (최대 100 VUs)
+- 앱, DB, 부하 생성기가 같은 환경이라 서로 자원을 경쟁할 수 있고 네트워크 지연이 반영되지 않습니다.
+- 엔드포인트별 단일 시나리오이며 로그인/댓글 등을 섞은 사용자 시나리오는 아직 없습니다.
+- 따라서 아래 수치는 운영 성능이 아니라 "개선 전후를 같은 조건에서 비교하기 위한 기준값"입니다.
+
+### 결과
 
 | API | VUs | 총 요청 | 성공률 | P95 | Peak RPS |
 |-----|-----|--------|--------|-----|----------|
@@ -217,13 +222,15 @@ PR 생성 시 자동 실행:
 | 회원가입 (Stress) | 100 | 18,100 | 100% | 721ms | 63.67 |
 | 회원가입 (Spike) | 100 | 4,300 | 100% | 909ms | 62.33 |
 
-### 주요 성과
+시나리오 설정, 그래프, 종합 분석: [docs/performance/K6_TEST_RESULTS.md](./docs/performance/K6_TEST_RESULTS.md)
 
-- 전체 27,000+ 요청 처리, 실패 0건
-- 게시글 조회 API: 평균 8.5ms 응답
-- 트래픽 급증(Spike) 시나리오 대응 성공
+### TODO: 쿼리 실행 계획(EXPLAIN) 분석
 
-상세 결과: [K6_TEST_RESULTS.md](./docs/performance/K6_TEST_RESULTS.md)
+아직 수행하지 않았습니다. 수행 후 이 섹션에 기록할 예정입니다 (수치는 측정 전까지 기재하지 않음).
+
+- [ ] 게시글 목록/검색 쿼리에 `EXPLAIN` 실행 (type, key, rows 확인)
+- [ ] 인덱스 추가 전후 비교 (같은 데이터 건수, 같은 조건)
+- [ ] 결과를 `docs/performance/` 에 정리하고 링크
 
 ---
 
@@ -263,10 +270,9 @@ public List<CategoryResponse> getActiveCategories() {
 
 ### 3. 비동기 이메일 전송
 
-회원가입 시 이메일 전송으로 인한 응답 지연 해결
+회원가입 시 이메일 전송으로 인한 응답 지연을 비동기 처리로 해결했습니다. 측정 조건(단건 측정 vs K6 부하 평균)이 달라 전후 수치의 직접 비교는 [K6_TEST_RESULTS.md](./docs/performance/K6_TEST_RESULTS.md)의 조건을 확인한 뒤 해석해야 합니다.
 
-| 구분 | 응답 시간 |
-|------|----------|
+------|----------|
 | Before (동기) | 417ms |
 | After (비동기) | 134ms |
 
