@@ -67,18 +67,21 @@ jobs:
           script: |
             set -e
 
-            echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
-            
-            # .env 파일 생성 (환경변수에서 주입)
-            echo "JDBC_DATABASE_URL=$DB_URL" > /home/ubuntu/.env
-            echo "JDBC_DATABASE_USERNAME=$DB_USER" >> /home/ubuntu/.env
-            echo "JDBC_DATABASE_PASSWORD=$DB_PASS" >> /home/ubuntu/.env
-            echo "JWT_SECRET=$JWT_SEC" >> /home/ubuntu/.env
-            echo "JWT_ACCESS_EXPIRATION=$JWT_ACCESS" >> /home/ubuntu/.env
-            echo "JWT_REFRESH_EXPIRATION=$JWT_REFRESH" >> /home/ubuntu/.env
-            echo "MAIL_USERNAME=$MAIL_USERNAME" >> /home/ubuntu/.env
-            echo "MAIL_PASSWORD=$MAIL_PASSWORD" >> /home/ubuntu/.env
-  
+            printf '%s' "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+            # .env 파일 생성 (printf 사용: 특수문자가 echo 로 변형되는 것 방지, 권한 600)
+            umask 077
+            {
+              printf 'JDBC_DATABASE_URL=%s\n' "$DB_URL"
+              printf 'JDBC_DATABASE_USERNAME=%s\n' "$DB_USER"
+              printf 'JDBC_DATABASE_PASSWORD=%s\n' "$DB_PASS"
+              printf 'JWT_SECRET=%s\n' "$JWT_SEC"
+              printf 'JWT_ACCESS_EXPIRATION=%s\n' "$JWT_ACCESS"
+              printf 'JWT_REFRESH_EXPIRATION=%s\n' "$JWT_REFRESH"
+              printf 'MAIL_USERNAME=%s\n' "$MAIL_USERNAME"
+              printf 'MAIL_PASSWORD=%s\n' "$MAIL_PASSWORD"
+            } > /home/ubuntu/.env
+
             docker pull $REGISTRY/$IMAGE_NAME:latest
             
             if docker ps --format '{{.Names}}' | grep -q "^board-blue$"; then
@@ -125,7 +128,7 @@ jobs:
             ELAPSED=0
             
             while [ $ELAPSED -lt $TIMEOUT ]; do
-              if docker inspect --format='{{.State.Health.Status}}' board-$NEW 2>/dev/null | grep -q "healthy"; then
+              if docker inspect --format='{{.State.Health.Status}}' board-$NEW 2>/dev/null | grep -qx "healthy"; then
                 echo "✅ New container is healthy!"
                 break;
               fi
