@@ -1,123 +1,67 @@
-# Board API - Spring Boot 게시판 프로젝트
+# Board API
 
-> Spring Boot를 활용한 RESTful API 기반 게시판 시스템
-
-## 프로젝트 소개
-
-Spring Boot 학습을 위해 개발한 게시판 API 프로젝트입니다.
-사용자 관리, 게시글 CRUD, 댓글 시스템, 파일 업로드, 동적 검색 등 실무에서 필요한 주요 백엔드 기능을 구현했습니다.
-
-### Highlights
-
-| 영역 | 내용 |
-|------|------|
-| **테스트** | JUnit 5 + Mockito 단위/통합 테스트, K6 부하 테스트 (100 VUs, P95 18.7ms) |
-| **CI/CD** | GitHub Actions + Docker + Codecov (커버리지 60%+) |
-| **배포** | AWS EC2 Blue-Green 무중단 배포 (Nginx 트래픽 전환) |
-| **성능 최적화** | N+1 문제 해결 (쿼리 21회 → 1회), 카테고리 캐싱 적용 |
-
-### 주요 기능
-
-- **사용자 관리**: 회원가입, 로그인, 프로필 관리
-- **게시글 시스템**: CRUD, 조회수, 카테고리별 분류
-- **댓글 시스템**: 계층형 댓글(대댓글), Soft Delete
-- **파일 업로드**: 프로필 이미지, 게시글 다중 이미지(최대 10개)
-- **동적 검색**: QueryDSL을 활용한 다중 조건 검색
-- **페이징 & 정렬**: 효율적인 데이터 조회
-- **예외 처리**: 통합 예외 처리 및 에러 응답 표준화
-- **API 문서화**: Swagger/OpenAPI 3.0
-
----
+Spring Boot 3 / Java 21 기반 게시판 REST API입니다. 회원(JWT 인증, 이메일 인증), 게시글 CRUD, 계층형 댓글(Soft Delete), 이미지 업로드, QueryDSL 동적 검색을 제공합니다. JPA N+1 문제를 Fetch Join으로 해결(게시글 목록 쿼리 21회 -> 1회)했고, GitHub Actions + Docker + Nginx Blue-Green 방식의 배포 파이프라인과 K6 부하 테스트까지 학습 목적으로 직접 구성했습니다.
 
 ## 기술 스택
 
-### Backend
-- **Java 21**
-- **Spring Boot 3.5.5**
-- **Spring Data JPA** - ORM 및 데이터 접근
-- **QueryDSL** - 동적 쿼리
-- **Spring Security** - JWT 인증/인가
-- **Validation** - 입력값 검증
+| 구분 | 사용 기술 |
+|------|-----------|
+| Language / Framework | Java 21, Spring Boot 3.5.5, Spring Security (JWT), Spring Data JPA, Validation |
+| 쿼리 | QueryDSL 5, Spring Cache |
+| DB | MySQL 8.0 (운영/개발), H2 (테스트) |
+| 테스트 | JUnit 5, Mockito, MockMvc, JaCoCo, K6 |
+| 문서화 | springdoc-openapi (Swagger UI) |
+| 인프라 / CI/CD | Docker, Docker Compose, GitHub Actions, GHCR, AWS EC2, Nginx |
 
-### Database
-- **MySQL 8.0** - 운영 DB
-- **H2** - 테스트 DB (In-Memory)
+테스트 코드는 `@Test` 약 78개입니다.
 
-### DevOps & Tools
-- **Docker & Docker Compose** - 컨테이너화
-- **GitHub Actions** - CI/CD
-- **AWS EC2** - 배포 환경
-- **Nginx** - 리버스 프록시 및 Blue-Green 배포
-- **Codecov** - 테스트 커버리지
-- **K6** - 부하 테스트
+## 빠른 시작
 
-### Test
-- **JUnit 5**
-- **Mockito**
-- **MockMvc** - 통합 테스트
+```bash
+# 1. 클론
+git clone https://github.com/0802222/board_r.git
+cd board_r
 
----
+# 2. 환경 변수 (.env 파일 또는 OS 환경 변수, 값은 직접 설정)
+#    JDBC_DATABASE_URL, JDBC_DATABASE_USERNAME, JDBC_DATABASE_PASSWORD
+#    JWT_SECRET, JWT_ACCESS_EXPIRATION, JWT_REFRESH_EXPIRATION
+#    MAIL_USERNAME, MAIL_PASSWORD
+#    SPRING_PROFILES_ACTIVE (선택, 기본값 local)
 
-## 프로젝트 구조
+# 3. 실행
+./gradlew bootRun
+
+# 4. 테스트 (JaCoCo 리포트: build/reports/jacoco/test/index.html)
+./gradlew test jacocoTestReport
+```
+
+- Docker Compose: `docker compose up -d` (같은 `.env` 사용, 이미지는 GHCR에서 pull)
+- Swagger UI: http://localhost:8080/swagger-ui.html
+
+## 아키텍처 개요
+
+```
+Client -> Nginx -> Spring Boot (Controller -> Service -> Repository) -> MySQL
+                       |-- Spring Security + JWT 필터 (인증/인가)
+                       |-- Spring Cache (카테고리 목록)
+                       `-- 로컬 파일 저장소 (이미지 업로드)
+```
+
+도메인별 패키지(`auth`, `category`, `comment`, `post`, `user`, `file`)와 공통 모듈(`global`: config, exception, response, util, validation)로 구성했습니다.
 
 ```
 src/main/java/com/cho/board/
-├── auth/               # JWT 인증/인가
-├── category/           # 카테고리 (캐싱 적용)
-│   ├── entity/
-│   ├── repository/
-│   ├── service/
-│   └── controller/
-├── comment/            # 계층형 댓글
-├── post/               # 게시글 CRUD
-├── user/               # 사용자 관리
-├── file/               # 파일 업로드
-└── global/             # 공통 기능
-    ├── common/         # BaseEntity
-    ├── config/         # Security, Swagger, QueryDSL
-    ├── constants/      # 상수 관리
-    ├── exception/      # 통합 예외 처리
-    ├── response/       # API 응답 표준화
-    ├── util/           # 유틸리티
-    └── validation/     # 커스텀 Validator
+├── auth/  category/  comment/  post/  user/  file/
+└── global/   # common, config, constants, exception, response, util, validation
 ```
 
----
+## 한계와 다음 개선
 
-## 시작하기
-
-### 사전 요구사항
-
-- Java 21 이상
-- MySQL 8.0 이상
-- Docker (선택사항)
-
-### 로컬 실행
-
-```bash
-# 1. 프로젝트 클론
-git clone https://github.com/0802222/Board_R.git
-cd Board_R
-
-# 2. 환경 변수 설정 (.env 파일 생성)
-JDBC_DATABASE_URL=jdbc:mysql://localhost:3306/board_db?useSSL=false&serverTimezone=Asia/Seoul
-JDBC_DATABASE_USERNAME=your_username
-JDBC_DATABASE_PASSWORD=your_password
-
-# 3. 애플리케이션 실행
-./gradlew bootRun
-```
-
-### Docker Compose로 실행
-
-```bash
-docker-compose up -d
-```
-
-### API 문서 확인
-
-- Swagger UI: http://localhost:8080/swagger-ui.html
-- API Docs: http://localhost:8080/v3/api-docs
+- 부하 테스트는 로컬(MacBook Air M2) 단일 환경, 최대 100 VUs 기준이며 운영 환경 수치가 아닙니다. 자세한 조건은 [성능 테스트](#성능-테스트-k6) 참고.
+- 테스트 커버리지 수치는 아직 README에 기재하지 않았습니다. CI(JaCoCo/Codecov) 측정값 확인 후 임계값 상향 예정입니다.
+- 인덱스/실행 계획(EXPLAIN) 기반 쿼리 튜닝은 아직 하지 않았습니다.
+- 배포 대상은 단일 EC2 인스턴스이며 모니터링/알림은 구성하지 않았습니다.
+- 파일은 서버 로컬 디스크에 저장합니다 (다중 인스턴스 시 S3 같은 외부 저장소 필요).
 
 ---
 
