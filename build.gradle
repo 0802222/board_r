@@ -101,6 +101,7 @@ jacocoTestReport {
 
 // 커버리지 검증
 jacocoTestCoverageVerification {
+    dependsOn test
     violationRules {
         rule {
             // 제외할 클래스들
@@ -113,8 +114,14 @@ jacocoTestCoverageVerification {
             ]
 
             limit {
-                minimum = 0.30 // 추후 0.60 수준으로 변경 예정
+                // TODO: 로컬/CI 에서 측정한 전체 커버리지보다 조금 낮은 값으로 상향 (측정 전이라 기존 값 유지)
+                minimum = 0.30
             }
         }
     }
+}
+
+// ./gradlew check 시 커버리지 검증도 함께 수행 (임계값 미만이면 빌드 실패)
+tasks.named('check') {
+    dependsOn jacocoTestCoverageVerification
 }
