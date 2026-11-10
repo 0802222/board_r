@@ -9,7 +9,15 @@ env:
   IMAGE_NAME: ${{ github.repository }}/board-staging
 
 jobs:
+  # 테스트가 통과해야만 배포 진행
+  test:
+    uses: ./.github/workflows/test.yml
+    permissions:
+      contents: read
+      pull-requests: write
+
   build-and-deploy:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
