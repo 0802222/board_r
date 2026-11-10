@@ -67,46 +67,53 @@ jobs:
           script: |
             set -e
             cd ~
-            echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+            printf '%s' "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
 
-            # .env 파일 생성 (docker-compose가 읽을 수 있도록)
-            echo "JDBC_DATABASE_URL=$DB_URL" > .env
-            echo "JDBC_DATABASE_USERNAME=$DB_USER" >> .env
-            echo "JDBC_DATABASE_PASSWORD=$DB_PASS" >> .env
-            echo "JWT_SECRET=$JWT_SEC" >> .env
-            echo "JWT_ACCESS_EXPIRATION=$JWT_ACCESS" >> .env
-            echo "JWT_REFRESH_EXPIRATION=$JWT_REFRESH" >> .env
-            echo "MAIL_USERNAME=$MAIL_USERNAME" >> .env
-            echo "MAIL_PASSWORD=$MAIL_PASSWORD" >> .env
+            # docker compose v2 / docker-compose v1 자동 감지
+            if docker compose version >/dev/null 2>&1; then
+              DC="docker compose"
+            else
+              DC="docker-compose"
+            fi
 
-
-            # 디버깅: .env 파일 내용 확인
-            echo "=== .env file contents ==="
-            cat .env
-            echo "=========================="
+            # .env 파일 생성 (printf 사용: 특수문자/백슬래시가 echo 로 변형되는 것 방지)
+            umask 077
+            {
+              printf 'JDBC_DATABASE_URL=%s\n' "$DB_URL"
+              printf 'JDBC_DATABASE_USERNAME=%s\n' "$DB_USER"
+              printf 'JDBC_DATABASE_PASSWORD=%s\n' "$DB_PASS"
+              printf 'JWT_SECRET=%s\n' "$JWT_SEC"
+              printf 'JWT_ACCESS_EXPIRATION=%s\n' "$JWT_ACCESS"
+              printf 'JWT_REFRESH_EXPIRATION=%s\n' "$JWT_REFRESH"
+              printf 'MAIL_USERNAME=%s\n' "$MAIL_USERNAME"
+              printf 'MAIL_PASSWORD=%s\n' "$MAIL_PASSWORD"
+            } > .env
 
             # 최신 스테이징 이미지 받아오기
-            docker pull $REGISTRY/$IMAGE_NAME:latest
+            docker pull "$REGISTRY/$IMAGE_NAME:latest"
 
-            # docker-compose 로 재배포 (.env 파일 사용)
-            docker-compose down
-            docker-compose up -d
+            # 재배포 (.env 파일 사용)
+            $DC down
+            $DC up -d
 
-            # 헬스 체크 (compose 에서 8080을 쓴다고 가정)
+            # 헬스 체크 (POSIX sh 호환 루프: {1..12} 는 bash 전용이라 sh 에서는 검사 없이 통과할 수 있음)
             echo "Waiting for app to be healthy..."
-            for i in {1..12}; do
-              if curl -f http://localhost:8080/actuator/health; then
-                echo "✅ Staging app is healthy!"
+            MAX=24
+            i=1
+            while [ "$i" -le "$MAX" ]; do
+              if curl -fsS http://localhost:8080/actuator/health >/dev/null; then
+                echo "Staging app is healthy"
                 break
               fi
 
-              if [ $i -eq 12 ]; then
-                echo "❌ Health check failed on staging"
-                docker-compose logs --tail=50
+              if [ "$i" -eq "$MAX" ]; then
+                echo "Health check failed on staging"
+                $DC logs --tail=50
                 exit 1
               fi
 
-              echo "Retry $i/12..."
+              echo "Retry $i/$MAX..."
+              i=$((i + 1))
               sleep 5
             done
 
